@@ -1,0 +1,10 @@
+name: IoT Server
+version: "1.0.0"
+slug: iot_server
+description: Servidor IoT personalizado para Raspberry Pi
+arch:
+  - aarch64
+startup: services
+boot: auto
+ports:
+  8000/tcp: 8000
