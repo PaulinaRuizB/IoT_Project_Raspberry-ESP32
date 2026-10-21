@@ -1,3 +1,3 @@
 #!/bin/sh
 
-python3 -m http.server 8000 --bind 0.0.0.0
+uvicorn app.main:app --host 0.0.0.0 --port 8000
