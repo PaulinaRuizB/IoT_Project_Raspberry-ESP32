@@ -1,344 +1,338 @@
-# Servidor IoT - Raspberry Pi
+# Servidor IoT Agrícola — Raspberry Pi y ESP32
 
 ## 1. Objetivo del proyecto
 
-Este proyecto tiene como objetivo convertir una Raspberry Pi 4 en el nodo
-principal de un sistema IoT capaz de comunicarse con múltiples nodos ESP32.
+Este proyecto busca convertir una Raspberry Pi 4 en el nodo central de un sistema IoT para monitoreo y apoyo a la toma de decisiones agrícolas.
 
-La Raspberry Pi ejecutará un servidor IoT encargado de:
+La Raspberry Pi funcionará como servidor local encargado de:
 
-- Recibir información de los ESP32.
-- Procesar y almacenar datos.
-- Enviar comandos a los ESP32.
-- Gestionar diferentes nodos IoT.
-- Proporcionar una API.
-- Proporcionar un dashboard web.
-- Gestionar autenticación de usuarios.
+- Recibir mediciones provenientes de múltiples nodos ESP32.
+- Validar y almacenar las mediciones.
+- Consultar el historial de datos.
+- Proporcionar una API para la comunicación entre componentes.
+- Alojar un dashboard web personalizado.
+- Generar recomendaciones agrícolas a partir de reglas y datos.
+- Procesar imágenes de plantas.
+- Registrar las decisiones del agricultor.
+- Funcionar localmente sin depender permanentemente de Internet.
 
-La comunicación entre la Raspberry Pi y los ESP32 se realizará principalmente
-mediante MQTT.
+Los nodos ESP32 medirán variables como humedad del suelo, temperatura y humedad ambiental.
 
----
+## 2. Arquitectura del proyecto
 
-## 2. Arquitectura general
-
-La arquitectura prevista es:
+La arquitectura de software actual es:
 
     Raspberry Pi 4
     │
-    ├── Home Assistant
-    │
-    ├── MQTT Broker
-    │
     └── IoT Server
          │
-         ├── API
-         ├── Dashboard
-         ├── Autenticación
-         ├── Base de datos
-         └── MQTT
-              │
-              ├── ESP32 - Nodo 1
-              ├── ESP32 - Nodo 2
-              └── ESP32 - Nodo 3
----
+         ├── FastAPI
+         │    ├── GET /api/status
+         │    ├── POST /api/measurements
+         │    ├── GET /api/measurements
+         │    └── GET /api/measurements/latest
+         │
+         ├── SQLite
+         │    └── iot_data.db
+         │         └── measurements
+         │
+         └── Componentes futuros
+              ├── Dashboard web
+              ├── Autenticación
+              ├── Recomendaciones agrícolas
+              ├── Análisis de imágenes
+              └── Registro de decisiones
+
+Arquitectura prevista de hardware:
+
+    ESP32 - Nodo 1 ──┐
+    ESP32 - Nodo 2 ──┼
+    ESP32 - Nodo 3 ──┘
+                         │
+                         ▼
+                    Raspberry Pi 4
+                         │
+                         ▼
+                  API + Base de datos
+                         │
+                         ▼
+                      Dashboard
+
+La API y la base de datos ya están implementadas. La comunicación con los nodos físicos, el dashboard y los demás componentes se desarrollarán posteriormente.
+
+La tecnología de comunicación con los ESP32 deberá seleccionarse según el alcance, la disponibilidad de conectividad y las condiciones del terreno. MQTT y LoRa son alternativas que se podrán evaluar; todavía no están implementadas en el proyecto.
 
 ## 3. Entorno actual
 
-Hardware:
+### Hardware
 
-- Raspberry Pi 4
+- Raspberry Pi 4.
+- Computador de desarrollo con Windows y Visual Studio Code.
 
-Sistema operativo:
+### Sistema operativo
 
-- Home Assistant OS
+- Raspberry Pi OS.
+- Acceso remoto mediante SSH.
 
-Arquitectura:
+### Software
 
-- aarch64
+- Python.
+- Entorno virtual de Python (`venv`).
+- FastAPI.
+- Uvicorn.
+- Pydantic.
+- SQLite.
+- Git y GitHub.
 
-Conectividad:
+### Red
 
-- Wi-Fi
+- Conexión local mediante Wi-Fi.
+- Puerto del servidor: TCP 8000.
+- Última dirección IP conocida de la Raspberry Pi: `192.168.80.25`.
 
-Dirección IP local actual:
+## 4. Estructura actual del proyecto
 
-- 192.168.80.16
-
----
-
-## 4. Estructura inicial del proyecto
-
-La aplicación se encuentra en:
-
-    /addons/iot_server
-
-Actualmente contiene:
+Estructura:
 
     iot_server/
+    ├── app/
+    │   ├── main.py
+    │   └── database.py
+    ├── iot_data.db
+    ├── .gitignore
     ├── config.yaml
     ├── Dockerfile
     ├── run.sh
     └── README.md
 
----
+Descripción:
 
-## 5. Conceptos importantes
+- `app/main.py`: instancia de FastAPI, modelos de entrada y endpoints HTTP.
+- `app/database.py`: inicialización de SQLite y funciones para guardar y consultar mediciones.
+- `iot_data.db`: archivo local que contiene la base de datos.
+- `.gitignore`: define archivos que Git debe ignorar.
+- `config.yaml`, `Dockerfile` y `run.sh`: archivos conservados de la etapa anterior con Home Assistant. No son necesarios para ejecutar la aplicación actual directamente con Uvicorn.
+- `README.md`: documentación del proyecto.
 
-### 5.1 Home Assistant OS
+El archivo `iot_data.db` se genera durante la ejecución.
 
-Home Assistant OS es el sistema operativo que administra la Raspberry Pi
-y proporciona el entorno necesario para ejecutar Home Assistant y sus
-Apps.
+## 5. Entorno virtual de Python
 
-### 5.2 App
+Un entorno virtual permite instalar y ejecutar dependencias de Python de forma aislada para un proyecto.
 
-Una App de Home Assistant es un servicio empaquetado para que el sistema
-pueda construirlo, ejecutarlo y administrarlo.
+En este proyecto se utiliza `venv`.
 
-Nuestra App IoT será administrada por Home Assistant OS/Supervisor, pero
-su aplicación será diseñada para funcionar independientemente de
-Home Assistant.
+Para activar el entorno virtual desde la raíz del proyecto:
 
-### 5.3 Docker
+    source venv/bin/activate
 
-Docker permite ejecutar aplicaciones dentro de contenedores.
+El servidor utiliza el puerto TCP 8000. Desde un dispositivo conectado a la misma red se puede acceder mediante:
 
-Un contenedor proporciona un entorno aislado para ejecutar nuestra
-aplicación y sus dependencias.
+    http://IP_DE_LA_RASPBERRY:8000
 
-### 5.4 Imagen
+La documentación interactiva de FastAPI está disponible en:
 
-Una imagen de Docker es la plantilla utilizada para crear un contenedor.
+    http://IP_DE_LA_RASPBERRY:8000/docs
 
-El Dockerfile contiene las instrucciones necesarias para construir esta
-imagen.
+## 6. API implementada
 
-### 5.5 Puerto
+### 6.1. Consultar el estado
 
-Un puerto permite identificar diferentes servicios que funcionan dentro
-de un mismo dispositivo.
+Método: `GET`
 
-En este proyecto:
+Ruta:
 
-    192.168.80.16:8123
-        Home Assistant
+    /api/status
 
-    192.168.80.16:8000
-        Servidor IoT
+Devuelve información básica del servidor, por ejemplo:
 
-El puerto 8000 será utilizado inicialmente por nuestro servidor web.
+    {
+      "server": "IoT Server",
+      "status": "online",
+      "version": "1.0.0"
+    }
 
----
+### 6.2. Registrar una medición
 
-## 6. config.yaml
+Método: `POST`
 
-El archivo config.yaml contiene la información que Home Assistant
-Supervisor necesita para identificar y administrar nuestra App.
+Ruta:
 
-Configuración actual:
+    /api/measurements
 
-    name: IoT Server
-    version: "1.0.0"
-    slug: iot_server
-    description: Servidor IoT personalizado para Raspberry Pi
-    arch:
-      - aarch64
-    startup: services
-    boot: auto
-    ports:
-      8000/tcp: 8000
+Ejemplo del cuerpo JSON:
 
-### Parámetros
+    {
+      "node_id": "ESP32_TEST_02",
+      "soil_moisture_pct": 55.2,
+      "temperature_c": 26.4,
+      "humidity_pct": 71.0
+    }
 
-#### name
+Campos:
 
-Nombre visible de la App.
+- `node_id`: identificador del nodo.
+- `soil_moisture_pct`: humedad del suelo expresada como porcentaje.
+- `temperature_c`: temperatura en grados Celsius.
+- `humidity_pct`: humedad ambiental expresada como porcentaje.
 
-#### version
+La API valida los datos mediante un modelo de Pydantic antes de ejecutar la operación de almacenamiento.
 
-Versión actual de la App.
+Si la operación tiene éxito, el endpoint devuelve el estado HTTP `201 Created` y el identificador del registro creado.
 
-#### slug
+La fecha y hora se generan en el servidor y se almacenan en formato ISO 8601 con zona horaria UTC.
 
-Identificador interno de la App.
+### 6.3. Consultar mediciones
 
-#### description
+Método: `GET`
 
-Descripción de la función de la App.
+Ruta:
 
-#### arch
+    /api/measurements
 
-Arquitectura de hardware soportada.
+Devuelve el historial de mediciones. Por defecto, devuelve hasta 50 registros.
 
-La Raspberry Pi utiliza aarch64.
+Se puede especificar una cantidad:
 
-#### startup
+    /api/measurements?limit=10
 
-Indica que la App funciona como un servicio.
+El parámetro `limit` acepta valores entre 1 y 500.
 
-#### boot
+### 6.4. Consultar la medición más reciente
 
-Con `auto`, la App debe iniciarse automáticamente.
+Método: `GET`
 
-#### ports
+Ruta:
 
-Define la relación entre el puerto utilizado por el contenedor
-y el puerto expuesto en la Raspberry Pi.
+    /api/measurements/latest
 
-En este proyecto:
+Devuelve la última medición registrada.
 
-    8000/tcp: 8000
+Si todavía no existen registros, la API devuelve un error HTTP `404 Not Found`.
 
-significa que el puerto TCP 8000 de la App será expuesto como
-puerto 8000 de la Raspberry Pi.
+### 6.5. Códigos HTTP relevantes
 
----
+- `200 OK`: la consulta se completó correctamente.
+- `201 Created`: se creó un registro.
+- `404 Not Found`: no existe una medición para devolver.
+- `422 Unprocessable Entity`: los datos recibidos no cumplen la validación.
+- `500 Internal Server Error`: se produjo un error interno durante el almacenamiento.
 
-## 7. Dockerfile
+## 7. Base de datos SQLite
 
-El Dockerfile contiene las instrucciones para construir la imagen
-de Docker de nuestra App.
+### 7.1. Estructura de la tabla
 
-Contenido actual:
+| Columna | Tipo SQL | Descripción |
+|---|---|---|
+| `id` | `INTEGER` | Identificador único autoincremental. |
+| `node_id` | `TEXT` | Identificador del nodo IoT. |
+| `timestamp` | `TEXT` | Fecha y hora de la medición. |
+| `soil_moisture_pct` | `REAL` | Humedad del suelo. |
+| `temperature_c` | `REAL` | Temperatura en grados Celsius. |
+| `humidity_pct` | `REAL` | Humedad ambiental. |
 
-    FROM python:3.12-alpine
+### 7.2. Funciones de `database.py`
 
-    WORKDIR /app
+- `initialize_database()`: crea la tabla si todavía no existe.
+- `save_measurement(...)`: inserta una medición y devuelve su identificador.
+- `get_measurements(limit=50)`: consulta las mediciones más recientes.
+- `get_latest_measurement()`: devuelve la última medición o `None` si no hay registros.
 
-    COPY run.sh /app/run.sh
+## 9. Validación de las mediciones
 
-    RUN chmod +x /app/run.sh
+El modelo `MeasurementInput` de `main.py` utiliza Pydantic para comprobar la estructura y los valores recibidos.
 
-    CMD ["/app/run.sh"]
+Reglas actuales:
 
-### Instrucciones utilizadas
+- `node_id`: texto de 1 a 50 caracteres.
+- `soil_moisture_pct`: valor entre 0 y 100.
+- `temperature_c`: valor entre -50 y 100 °C.
+- `humidity_pct`: valor entre 0 y 100.
 
-#### FROM
+## 10. Pruebas realizadas
 
-Define la imagen base.
+### Prueba 001 — Acceso mediante SSH
 
-Utilizamos Python 3.12 sobre Alpine Linux.
+**Estado: COMPLETADA**
 
-#### WORKDIR
+Se confirmó el acceso remoto a la Raspberry Pi desde el computador de desarrollo.
 
-Define el directorio de trabajo dentro del contenedor.
+### Prueba 002 — Configuración del nuevo sistema operativo
 
-#### COPY
+**Estado: COMPLETADA**
 
-Copia archivos desde el proyecto hacia el contenedor.
+Se instaló un sistema operativo independiente de Home Assistant OS y se configuró el acceso al proyecto.
 
-#### RUN
+### Prueba 003 — Ejecución de FastAPI
 
-Ejecuta un comando durante la construcción de la imagen.
+**Estado: COMPLETADA**
 
-En este caso se utiliza chmod para dar permiso de ejecución a run.sh.
+Se inició el servidor mediante Uvicorn y se confirmó el acceso a sus rutas desde la red local.
 
-#### CMD
+### Prueba 004 — Endpoints básicos
 
-Define el comando que se ejecutará cuando se inicie el contenedor.
+**Estado: COMPLETADA**
 
----
+Se comprobaron las rutas `/` y `/api/status`.
 
-## 8. run.sh
+### Prueba 005 — Creación de SQLite
 
-Este archivo es un script de Linux utilizado para iniciar nuestra
-aplicación.
+**Estado: COMPLETADA**
 
-Contenido actual:
+Se inicializó la base de datos y se verificó la existencia de la tabla `measurements`.
 
-    #!/bin/sh
+### Prueba 006 — Guardado de una medición de prueba
 
-    python3 -m http.server 8000 --bind 0.0.0.0
+**Estado: COMPLETADA**
 
-Actualmente no ejecuta todavía FastAPI ni MQTT.
+Se guardó una medición ficticia con identificador de nodo `ESP32_TEST`, humedad del suelo de 42.5 %, temperatura de 25.8 °C y humedad ambiental de 68 %.
 
-Su objetivo inicial es crear un servidor HTTP mínimo que permita
-comprobar que la App se construye, inicia automáticamente y puede
-recibir conexiones mediante el puerto 8000.
+### Prueba 007 — Consulta de datos almacenados
 
----
+**Estado: COMPLETADA**
 
-## 9. Plan de desarrollo
+Se recuperó la medición guardada y se confirmó que la base de datos devolvía sus valores.
 
-El proyecto se desarrollará progresivamente:
+### Prueba 008 — API de mediciones
 
-1. Crear la App mínima.
-2. Construir la imagen Docker.
-3. Iniciar automáticamente la App.
-4. Comprobar el puerto 8000.
-5. Comprobar acceso desde otro computador.
-6. Sustituir el servidor HTTP de prueba por FastAPI.
-7. Crear la API.
-8. Crear el dashboard web.
-9. Implementar autenticación.
-10. Implementar base de datos.
-11. Implementar MQTT.
-12. Crear comunicación con ESP32.
-13. Implementar múltiples nodos.
-14. Implementar sensores y actuadores.
-15. Implementar almacenamiento histórico.
-16. Implementar configuración y administración de nodos.
+**Estado: COMPLETADA**
 
-Cada etapa deberá probarse antes de pasar a la siguiente.
+Se probaron el endpoint POST para registrar mediciones y los endpoints GET para consultar el historial y la última medición mediante `/docs`.
 
----
+Las pruebas se realizaron con datos de ejemplo; todavía no se han recibido lecturas de un ESP32 físico.
 
-## 10. Registro de pruebas
+## 11. Limitaciones actuales
 
-### Prueba 001 - Acceso mediante SSH
+- No se ha conectado un ESP32 físico.
+- No se ha implementado MQTT.
+- El mecanismo de comunicación de campo entre nodos y Raspberry Pi sigue pendiente de selección y validación.
+- No se ha desarrollado el dashboard personalizado.
+- No se ha implementado autenticación de usuarios.
+- No se han implementado recomendaciones agrícolas.
+- No se ha incorporado análisis de imágenes.
+- No se han realizado pruebas completas de campo sin Internet.
+- No se ha configurado un servicio de producción con inicio automático, supervisión y reinicio del servidor.
 
-Estado: CORRECTO
+El servidor actual es una base funcional para continuar el desarrollo, pero todavía no es un sistema completo listo para desplegar en una explotación agrícola.
 
-Se confirmó el acceso mediante SSH al entorno Terminal & SSH.
+## 12. Plan de desarrollo
 
-### Prueba 002 - Acceso al directorio /addons
+1. Documentar y versionar la API y la base de datos.
+2. Mejorar la ejecución del servidor para que pueda iniciarse automáticamente.
+3. Definir y probar la comunicación entre los nodos y la Raspberry Pi.
+4. Recibir mediciones de un ESP32 real.
+5. Validar y almacenar las lecturas físicas.
+6. Desarrollar el dashboard web personalizado.
+7. Implementar autenticación y usuarios.
+8. Mostrar el historial y el estado de los nodos.
+9. Crear reglas iniciales para recomendaciones agrícolas.
+10. Integrar la cámara de la Raspberry Pi y análisis visual básico.
+11. Registrar decisiones del agricultor.
+12. Implementar alertas locales.
+13. Validar el funcionamiento sin Internet.
+14. Evaluar sincronización cuando exista conectividad.
+15. Realizar pruebas con usuarios y documentar los resultados.
 
-Estado: CORRECTO
+**Última actualización:** implementación inicial de FastAPI y SQLite.
 
-Se confirmó que /addons existe y puede utilizarse para desarrollar
-la App local.
-
-### Prueba 003 - Creación del proyecto
-
-Estado: CORRECTO
-
-Se creó:
-
-    /addons/iot_server
-
-### Prueba 004 - config.yaml
-
-Estado: CORRECTO
-
-Se creó y verificó el archivo config.yaml.
-
-### Prueba 005 - Dockerfile
-
-Estado: CORRECTO
-
-Se creó y verificó el Dockerfile.
-
-### Prueba 006 - run.sh
-
-Estado: CORRECTO
-
-Se creó y verificó el script de inicio.
-
-### Prueba 007 - Construcción de la App
-
-Estado: PENDIENTE
-
-### Prueba 008 - Inicio automático
-
-Estado: ✅ Completada
-
-Resultado:
-La aplicación IoT Server fue detectada por Home Assistant
-Supervisor, instalada, construida y ejecutada correctamente.
-
-El servidor HTTP de prueba es accesible mediante:
-
-http://192.168.80.16:8000
-
-Home Assistant no es necesario para acceder al servidor.
+**Estado general:** servidor y API de mediciones funcionando con datos de prueba; integración con sensores físicos pendiente.
