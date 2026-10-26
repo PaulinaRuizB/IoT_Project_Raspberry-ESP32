@@ -9,10 +9,24 @@ from app.database import (
     save_measurement,
     get_measurements,
     get_latest_measurement,
+    get_latest_measurement,
+    get_node_ids,
 )
 
-app = FastAPI(title="IoT Server")
+from pathlib import Path
 
+from fastapi.staticfiles import StaticFiles
+from fastapi.responses import FileResponse
+
+app = FastAPI(title="IoT Server")
+BASE_DIR = Path(__file__).resolve().parent.parent
+STATIC_DIR = BASE_DIR / "static"
+
+app.mount(
+    "/static",
+    StaticFiles(directory=STATIC_DIR),
+    name="static"
+)
 
 # Modelo que define los datos que debe enviar un nodo IoT
 class MeasurementInput(BaseModel):
@@ -30,10 +44,7 @@ def startup_event():
 
 @app.get("/")
 def root():
-    return {
-        "message": "IoT Server funcionando",
-        "status": "online"
-    }
+    return FileResponse(STATIC_DIR / "index.html")
 
 
 @app.get("/api/status")
@@ -73,22 +84,37 @@ def create_measurement(measurement: MeasurementInput):
 
 
 # Consultar el historial de mediciones
-@app.get("/api/measurements") #devuelve el historial
+@app.get("/api/measurements")
 def list_measurements(
-    limit: int = Query(default=50, ge=1, le=500)
+    limit: int = Query(default=50, ge=1, le=500),
+    node_id: str | None = Query(
+        default=None,
+        min_length=1,
+        max_length=50
+    ),
 ):
-    return get_measurements(limit=limit)
+    return get_measurements(limit=limit, node_id=node_id)
 
 
 # Consultar la medición más reciente
 @app.get("/api/measurements/latest")
-def latest_measurement():
-    measurement = get_latest_measurement()
+def latest_measurement(
+    node_id: str | None = Query(
+        default=None,
+        min_length=1,
+        max_length=50
+    )
+):
+    measurement = get_latest_measurement(node_id=node_id)
 
     if measurement is None:
         raise HTTPException(
             status_code=404,
-            detail="Todavía no hay mediciones registradas."
+            detail="Todavía no hay mediciones registradas para este nodo."
         )
 
     return measurement
+
+@app.get("/api/nodes")
+def list_nodes():
+    return get_node_ids()

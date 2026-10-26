@@ -60,19 +60,29 @@ def save_measurement( #inserta una nueva lectura en SQlite
         connection.close()
 
 
-def get_measurements(limit=50): #recupera hasta 50 mediciones
-    """Devuelve las mediciones más recientes primero."""
+
+def get_measurements(limit=50, node_id=None):
+    """Devuelve mediciones recientes, opcionalmente filtradas por nodo."""
 
     connection = sqlite3.connect(DATABASE_PATH)
     connection.row_factory = sqlite3.Row
 
     try:
-        rows = connection.execute("""
-            SELECT *
-            FROM measurements
-            ORDER BY id DESC
-            LIMIT ?
-        """, (limit,)).fetchall()
+        if node_id is None:
+            rows = connection.execute("""
+                SELECT *
+                FROM measurements
+                ORDER BY id DESC
+                LIMIT ?
+            """, (limit,)).fetchall()
+        else:
+            rows = connection.execute("""
+                SELECT *
+                FROM measurements
+                WHERE node_id = ?
+                ORDER BY id DESC
+                LIMIT ?
+            """, (node_id, limit)).fetchall()
 
         return [dict(row) for row in rows]
 
@@ -80,12 +90,30 @@ def get_measurements(limit=50): #recupera hasta 50 mediciones
         connection.close()
 
 
-def get_latest_measurement(): #devuelve la última medición o none si no hay datos 
-    """Devuelve la medición más reciente, si existe."""
+def get_latest_measurement(node_id=None):
+    """Devuelve la medición más reciente, opcionalmente por nodo."""
 
-    measurements = get_measurements(limit=1)
+    measurements = get_measurements(limit=1, node_id=node_id)
 
     if measurements:
         return measurements[0]
 
     return None
+
+
+def get_node_ids():
+    """Devuelve los identificadores de nodos registrados."""
+
+    connection = sqlite3.connect(DATABASE_PATH)
+
+    try:
+        rows = connection.execute("""
+            SELECT DISTINCT node_id
+            FROM measurements
+            ORDER BY node_id
+        """).fetchall()
+
+        return [row[0] for row in rows]
+
+    finally:
+        connection.close()

@@ -1,0 +1,154 @@
+
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+
+    <title>Monitoreo agrícola</title>
+
+    <link rel="stylesheet" href="/static/styles.css">
+    <script src="/static/app.js" defer></script>
+</head>
+
+<body>
+    <div class="app-container">
+
+        <aside class="sidebar">
+            <div class="brand">
+                <div class="brand-icon">🌱</div>
+                <div>
+                    <h2>Mi Cultivo</h2>
+                    <p>Monitoreo agrícola</p>
+                </div>
+            </div>
+
+            <nav class="navigation">
+                <a href="#inicio" class="nav-link active">🏡 Inicio</a>
+                <a href="#mediciones" class="nav-link">💧 Mediciones</a>
+                <a href="#recomendaciones" class="nav-link">🌿 Recomendaciones</a>
+                <a href="#sistema" class="nav-link">📡 Estado del sistema</a>
+            </nav>
+
+            <div class="sidebar-footer">
+                <span class="status-dot"></span>
+                <span>Servidor local</span>
+            </div>
+        </aside>
+
+        <main class="main-content" id="inicio">
+
+            <header class="topbar">
+                <div>
+                    <p class="eyebrow">PANEL DE CONTROL</p>
+                    <h1>¡Hola, agricultor!</h1>
+                    <p class="subtitle">
+                        Aquí puedes consultar el estado de tu cultivo.
+                    </p>
+                </div>
+
+                <div class="connection-badge" id="server-status">
+                    <span class="status-dot"></span>
+                    Comprobando servidor...
+                </div>
+            </header>
+
+            <section class="section" id="mediciones">
+                <div class="section-heading">
+                    <div>
+                        <h2>Estado del cultivo</h2>
+                        <div class="node-filter">
+                            <label for="node-selector">Zona o nodo del cultivo</label>
+
+                            <select id="node-selector">
+                                <option value="">Todos los nodos</option>
+                            </select>
+                        </div>
+                        <p>Resumen de las últimas mediciones disponibles.</p>
+                    </div>
+                </div>
+
+                <div class="metrics-grid" id="metrics-grid">
+
+                    <article class="metric-card">
+                        <div class="metric-icon soil-icon">💧</div>
+                        <p class="metric-title">Humedad del suelo</p>
+                        <p class="metric-value" id="soil-moisture">--<span>%</span></p>
+                        <p class="metric-description" id="soil-updated">
+                            Esperando medición
+                        </p>
+                    </article>
+
+                    <article class="metric-card">
+                        <div class="metric-icon temperature-icon">🌡️</div>
+                        <p class="metric-title">Temperatura</p>
+                        <p class="metric-value" id="temperature">--<span>°C</span></p>
+                        <p class="metric-description">Temperatura ambiental</p>
+                    </article>
+
+                    <article class="metric-card">
+                        <div class="metric-icon humidity-icon">☁️</div>
+                        <p class="metric-title">Humedad ambiental</p>
+                        <p class="metric-value" id="humidity">--<span>%</span></p>
+                        <p class="metric-description">Humedad del aire</p>
+                    </article>
+
+                    <article class="metric-card">
+                        <div class="metric-icon node-icon">📡</div>
+                        <p class="metric-title">Nodo sensor</p>
+                        <p class="metric-value metric-node" id="node-id">--</p>
+                        <p class="metric-description">Identificador del sensor</p>
+                    </article>
+
+                </div>
+                <div id="all-nodes-container" class="all-nodes-grid" hidden></div>
+            </section>
+
+            <section class="section" id="recomendaciones">
+                <div class="section-heading">
+                    <div>
+                        <h2>Recomendaciones</h2>
+                        <p>Información para ayudarte a cuidar tu cultivo.</p>
+                    </div>
+                </div>
+
+                <article class="recommendation-card">
+                    <div class="recommendation-icon">🌿</div>
+                    <div>
+                        <h3 id="recommendation-title">Preparando el análisis</h3>
+                        <p id="recommendation-text">
+                            Cuando recibamos mediciones, podremos mostrar
+                            recomendaciones basadas en las condiciones
+                            registradas y en las necesidades del cultivo.
+                        </p>
+                    </div>
+                </article>
+            </section>
+
+            <section class="section" id="sistema">
+                <div class="section-heading">
+                    <div>
+                        <h2>Sistema</h2>
+                        <p>Estado de la plataforma de monitoreo.</p>
+                    </div>
+                </div>
+
+                <article class="system-card">
+                    <div>
+                        <span class="status-dot"></span>
+                        <strong>Servidor Raspberry Pi</strong>
+                    </div>
+                    <p id="system-message">
+                        Comprobando conexión con el servidor...
+                    </p>
+                </article>
+            </section>
+
+            <footer class="page-footer">
+                <p>Mi Cultivo · Sistema local de monitoreo agrícola</p>
+            </footer>
+
+        </main>
+    </div>
+</body>
+</html>
