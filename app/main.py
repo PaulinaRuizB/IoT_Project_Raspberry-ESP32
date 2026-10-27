@@ -31,10 +31,9 @@ app.mount(
 # Modelo que define los datos que debe enviar un nodo IoT
 class MeasurementInput(BaseModel):
     node_id: str = Field(min_length=1, max_length=50)
-    soil_moisture_pct: float = Field(ge=0, le=100)
-    temperature_c: float = Field(ge=-50, le=100) #entre -50 y 100°
-    humidity_pct: float = Field(ge=0, le=100) #entre 0 y 100
-
+    soil_moisture_pct: float | None = Field(default=None,ge=0,le=100)
+    temperature_c: float = Field(ge=-50, le=100)
+    humidity_pct: float | None = Field(default=None, ge=0, le=100)
 
 # Crear la tabla al iniciar la aplicación
 @app.on_event("startup")

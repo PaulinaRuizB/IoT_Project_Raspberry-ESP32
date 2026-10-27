@@ -37,7 +37,6 @@ La arquitectura de software actual es:
          │         └── measurements
          │
          └── Componentes futuros
-              ├── Dashboard web
               ├── Autenticación
               ├── Recomendaciones agrícolas
               ├── Análisis de imágenes
@@ -195,9 +194,12 @@ Se hizo la primera versión del dashboard intuitivo para agricultores con la sig
 - Vista de datos de prueba organizados en tarjetas. 
 - Vista de recomendaciones. 
 
+### Prueba 010 - Sensor BMP280 y comunicación con ESP32C6
+
+Se hizo la primera prueba de enviar un dato al servidor (raspberry) por medio de un sensor BMP280 de temperatura y una ESP32C6. Por ahora, funciona de forma local con la dirección IP. Se actualizan los datos en el dashboard cada 5 segundos.  
+
 ## 11. Limitaciones actuales
 
-- No se ha conectado un ESP32 físico.
 - No se ha implementado MQTT.
 - El mecanismo de comunicación de campo entre nodos y Raspberry Pi sigue pendiente de selección y validación.
 - No se ha implementado autenticación de usuarios.
