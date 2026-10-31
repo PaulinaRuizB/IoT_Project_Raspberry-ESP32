@@ -450,17 +450,3 @@ python -m app.create_admin
 ```bash
 python -m app.create_farmer
 ```
-# Estado actual del desarrollo
-
-Hasta esta etapa se cuenta con:
-
-- Servidor FastAPI funcionando en Raspberry Pi.
-- Base de datos SQLite inicializada.
-- Recepción y almacenamiento de mediciones.
-- Registro de fincas y nodos.
-- Sistema de autenticación con Argon2.
-- Gestión de sesiones mediante cookies.
-- Roles de administrador y agricultor.
-- Asociación de usuarios con fincas.
-- Filtrado de nodos y mediciones según los permisos del usuario.
-- Pruebas de inicio de sesión, cierre de sesión y separación de datos.

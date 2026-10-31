@@ -2,9 +2,27 @@
 /*
  * Mi Cultivo - Frontend
  * Consulta los datos del IoT Server y actualiza el dashboard.
+ * Incluye autenticación de usuarios y control de sesiones.
  */
 
+// ========================================
+// 1. ELEMENTOS DEL HTML
+// ========================================
+
 const elements = {
+    loginView: document.getElementById("login-view"),
+    dashboardView: document.getElementById("dashboard-view"),
+    loginForm: document.getElementById("login-form"),
+    loginUsername: document.getElementById("login-username"),
+    loginPassword: document.getElementById("login-password"),
+    loginError: document.getElementById("login-error"),
+    loginButton: document.getElementById("login-button"),
+
+    currentUsername: document.getElementById("current-username"),
+    currentFarm: document.getElementById("current-farm"),
+    welcomeMessage: document.getElementById("welcome-message"),
+    logoutButton: document.getElementById("logout-button"),
+
     serverStatus: document.getElementById("server-status"),
     systemMessage: document.getElementById("system-message"),
 
@@ -22,12 +40,224 @@ const elements = {
     recommendationText: document.getElementById("recommendation-text")
 };
 
-function showNoMeasurement() {
-    elements.soilMoisture.textContent = "--";
-    elements.temperature.textContent = "--";
-    elements.humidity.textContent = "--";
-    elements.nodeId.textContent = "--";
+// ========================================
+// 2. ESTADO DE LA APLICACIÓN
+// ========================================
 
+let isAuthenticated = false;
+let refreshTimer = null;
+
+// ========================================
+// 3. CONTROL DE AUTENTICACIÓN
+// ========================================
+
+function showLogin(message = "") {
+    isAuthenticated = false;
+
+    // Detenemos las actualizaciones automáticas.
+    if (refreshTimer !== null) {
+        clearInterval(refreshTimer);
+        refreshTimer = null;
+    }
+
+    elements.dashboardView.hidden = true;
+    elements.loginView.hidden = false;
+
+    elements.loginError.textContent = message;
+    elements.loginError.hidden = !message;
+}
+
+function showDashboard(user) {
+    isAuthenticated = true;
+
+    elements.loginView.hidden = true;
+    elements.dashboardView.hidden = false;
+
+    elements.currentUsername.textContent = user.username;
+    elements.currentFarm.textContent =
+        user.farm_name || "Todas las fincas";
+
+    if (elements.welcomeMessage) {
+        elements.welcomeMessage.textContent =
+            `¡Hola, ${user.username}!`;
+    }
+}
+
+// Consultamos una API que requiere autenticación.
+// Si la sesión venció, regresamos al inicio de sesión.
+
+async function authenticatedFetch(url, options = {}) {
+    const response = await fetch(url, {
+        ...options,
+        credentials: "same-origin"
+    });
+
+    if (response.status === 401) {
+        showLogin("Tu sesión ha expirado. Inicia sesión nuevamente.");
+        throw new Error("SESSION_EXPIRED");
+    }
+
+    return response;
+}
+
+// Comprobamos si existe una sesión activa.
+
+async function checkCurrentSession() {
+    try {
+        const response = await fetch("/api/auth/me", {
+            credentials: "same-origin"
+        });
+
+        if (response.status === 401) {
+            showLogin();
+            return;
+        }
+
+        if (!response.ok) {
+            throw new Error("No se pudo verificar la sesión.");
+        }
+
+        const user = await response.json();
+
+        showDashboard(user);
+        await initializeDashboardData();
+
+    } catch (error) {
+        console.error("Error al verificar la sesión:", error);
+
+        showLogin(
+            "No fue posible conectar con el servidor. Inténtalo nuevamente."
+        );
+    }
+}
+
+// Procesamos el formulario de inicio de sesión.
+
+async function login(event) {
+    event.preventDefault();
+
+    elements.loginError.hidden = true;
+    elements.loginButton.disabled = true;
+    elements.loginButton.textContent = "Ingresando...";
+
+    const username = elements.loginUsername.value.trim();
+    const password = elements.loginPassword.value;
+
+    try {
+        const response = await fetch("/api/auth/login", {
+            method: "POST",
+            headers: {
+                "Content-Type": "application/json"
+            },
+            credentials: "same-origin",
+            body: JSON.stringify({
+                username: username,
+                password: password
+            })
+        });
+
+        if (!response.ok) {
+            let message = "Usuario o contraseña incorrectos.";
+
+            try {
+                const data = await response.json();
+                message = data.detail || message;
+            } catch (error) {
+                // Conservamos el mensaje predeterminado.
+            }
+
+            throw new Error(message);
+        }
+
+        // Consultamos los datos completos del usuario.
+        const userResponse = await fetch("/api/auth/me", {
+            credentials: "same-origin"
+        });
+
+        if (!userResponse.ok) {
+            throw new Error(
+                "No se pudieron obtener los datos de tu usuario."
+            );
+        }
+
+        const user = await userResponse.json();
+
+        elements.loginPassword.value = "";
+
+        showDashboard(user);
+
+        await initializeDashboardData();
+
+    } catch (error) {
+        console.error("Error al iniciar sesión:", error);
+
+        showLogin(error.message);
+
+    } finally {
+        elements.loginButton.disabled = false;
+        elements.loginButton.textContent = "Iniciar sesión";
+    }
+}
+
+// Cerramos la sesión en el servidor.
+
+async function logout() {
+    elements.logoutButton.disabled = true;
+
+    try {
+        const response = await fetch("/api/auth/logout", {
+            method: "POST",
+            credentials: "same-origin"
+        });
+
+        if (!response.ok) {
+            throw new Error("No se pudo cerrar la sesión correctamente.");
+        }
+
+        showLogin("Has cerrado sesión correctamente.");
+
+    } catch (error) {
+        console.error("Error al cerrar sesión:", error);
+
+        showLogin(
+            "Se cerró la vista del panel, pero no se pudo confirmar el cierre en el servidor."
+        );
+
+    } finally {
+        elements.loginPassword.value = "";
+        elements.logoutButton.disabled = false;
+    }
+}
+
+// ========================================
+// 4. FUNCIONES DEL DASHBOARD
+// ========================================
+
+// Actualizamos el valor de una tarjeta sin perder su unidad visual.
+
+function setMetricValue(element, value, unit = "") {
+    element.replaceChildren();
+
+    const displayedValue =
+        value === null || value === undefined ? "--" : value;
+
+    element.appendChild(
+        document.createTextNode(String(displayedValue))
+    );
+
+    if (unit) {
+        const span = document.createElement("span");
+        span.textContent = unit;
+        element.appendChild(span);
+    }
+}
+
+function showNoMeasurement() {
+    setMetricValue(elements.soilMoisture, "--", "%");
+    setMetricValue(elements.temperature, "--", "°C");
+    setMetricValue(elements.humidity, "--", "%");
+
+    elements.nodeId.textContent = "--";
     elements.soilUpdated.textContent = "Esperando primera medición";
 
     elements.recommendationTitle.textContent = "Aún no hay mediciones";
@@ -35,6 +265,10 @@ function showNoMeasurement() {
         "Cuando este nodo envíe sus datos, podremos mostrar " +
         "información y recomendaciones para tu cultivo.";
 }
+
+// ========================================
+// 5. ESTADO DEL SERVIDOR
+// ========================================
 
 async function checkServerStatus() {
     try {
@@ -58,14 +292,19 @@ async function checkServerStatus() {
 
     } catch (error) {
         elements.serverStatus.textContent = "● Sin conexión";
+
         elements.systemMessage.textContent =
             "No fue posible comunicarse con el servidor.";
     }
 }
 
+// ========================================
+// 6. CARGA DE NODOS
+// ========================================
+
 async function loadNodes() {
     try {
-        const response = await fetch("/api/nodes");
+        const response = await authenticatedFetch("/api/nodes");
 
         if (!response.ok) {
             throw new Error("No se pudieron consultar los nodos.");
@@ -74,7 +313,6 @@ async function loadNodes() {
         const nodes = await response.json();
         const previousSelection = elements.nodeSelector.value;
 
-        // Conservamos la opción general.
         elements.nodeSelector.replaceChildren();
 
         const allOption = document.createElement("option");
@@ -82,7 +320,6 @@ async function loadNodes() {
         allOption.textContent = "Todos los nodos";
         elements.nodeSelector.appendChild(allOption);
 
-        // Añadimos los nodos que existen en la base de datos.
         nodes.forEach((nodeId) => {
             const option = document.createElement("option");
             option.value = nodeId;
@@ -90,7 +327,6 @@ async function loadNodes() {
             elements.nodeSelector.appendChild(option);
         });
 
-        // Conservamos la selección si el nodo sigue existiendo.
         const selectionStillExists = Array.from(
             elements.nodeSelector.options
         ).some((option) => option.value === previousSelection);
@@ -100,20 +336,35 @@ async function loadNodes() {
             : "";
 
     } catch (error) {
-        elements.systemMessage.textContent =
-            "No fue posible cargar la lista de nodos.";
+        if (error.message !== "SESSION_EXPIRED" && isAuthenticated) {
+            elements.systemMessage.textContent =
+                "No fue posible cargar la lista de nodos.";
+        }
     }
 }
 
+// ========================================
+// 7. VISUALIZACIÓN DE MEDICIONES
+// ========================================
+
 function showMeasurement(data) {
-    elements.soilMoisture.textContent =
-        `${data.soil_moisture_pct}%`;
+    setMetricValue(
+        elements.soilMoisture,
+        data.soil_moisture_pct,
+        "%"
+    );
 
-    elements.temperature.textContent =
-        `${data.temperature_c} °C`;
+    setMetricValue(
+        elements.temperature,
+        data.temperature_c,
+        "°C"
+    );
 
-    elements.humidity.textContent =
-        `${data.humidity_pct}%`;
+    setMetricValue(
+        elements.humidity,
+        data.humidity_pct,
+        "%"
+    );
 
     elements.nodeId.textContent = data.node_id;
 
@@ -131,6 +382,8 @@ function showMeasurement(data) {
         "con reglas apropiadas para cada cultivo.";
 }
 
+// Consultamos la última medición de un nodo.
+
 async function getLatestMeasurement(nodeId) {
     let url = "/api/measurements/latest";
 
@@ -138,7 +391,7 @@ async function getLatestMeasurement(nodeId) {
         url += `?node_id=${encodeURIComponent(nodeId)}`;
     }
 
-    const response = await fetch(url);
+    const response = await authenticatedFetch(url);
 
     if (response.status === 404) {
         return null;
@@ -151,12 +404,16 @@ async function getLatestMeasurement(nodeId) {
     return response.json();
 }
 
+// Cargamos las mediciones de un nodo seleccionado.
+
 async function loadSelectedNode(nodeId) {
     elements.metricsGrid.hidden = false;
     elements.allNodesContainer.hidden = true;
 
     try {
         const measurement = await getLatestMeasurement(nodeId);
+
+        if (!isAuthenticated) return;
 
         if (!measurement) {
             showNoMeasurement();
@@ -166,6 +423,8 @@ async function loadSelectedNode(nodeId) {
         showMeasurement(measurement);
 
     } catch (error) {
+        if (!isAuthenticated) return;
+
         elements.soilUpdated.textContent =
             "No fue posible cargar la medición.";
 
@@ -176,6 +435,10 @@ async function loadSelectedNode(nodeId) {
             "Comprueba la conexión con el servidor e inténtalo de nuevo.";
     }
 }
+
+// ========================================
+// 8. TARJETAS DE NODOS
+// ========================================
 
 function createNodeCard(nodeId, measurement) {
     const card = document.createElement("article");
@@ -196,7 +459,11 @@ function createNodeCard(nodeId, measurement) {
     soil.textContent = "Humedad del suelo: ";
 
     const soilValue = document.createElement("strong");
-    soilValue.textContent = `${measurement.soil_moisture_pct}%`;
+    soilValue.textContent =
+        measurement.soil_moisture_pct == null
+            ? "--"
+            : `${measurement.soil_moisture_pct}%`;
+
     soil.appendChild(soilValue);
     card.appendChild(soil);
 
@@ -204,7 +471,11 @@ function createNodeCard(nodeId, measurement) {
     temperature.textContent = "Temperatura: ";
 
     const temperatureValue = document.createElement("strong");
-    temperatureValue.textContent = `${measurement.temperature_c} °C`;
+    temperatureValue.textContent =
+        measurement.temperature_c == null
+            ? "--"
+            : `${measurement.temperature_c} °C`;
+
     temperature.appendChild(temperatureValue);
     card.appendChild(temperature);
 
@@ -212,12 +483,17 @@ function createNodeCard(nodeId, measurement) {
     humidity.textContent = "Humedad ambiental: ";
 
     const humidityValue = document.createElement("strong");
-    humidityValue.textContent = `${measurement.humidity_pct}%`;
+    humidityValue.textContent =
+        measurement.humidity_pct == null
+            ? "--"
+            : `${measurement.humidity_pct}%`;
+
     humidity.appendChild(humidityValue);
     card.appendChild(humidity);
 
     const updated = document.createElement("p");
     updated.className = "node-updated";
+
     updated.textContent =
         `Última medición: ${
             new Date(measurement.timestamp).toLocaleString("es-CO")
@@ -228,13 +504,17 @@ function createNodeCard(nodeId, measurement) {
     return card;
 }
 
+// ========================================
+// 9. RESUMEN DE TODOS LOS NODOS
+// ========================================
+
 async function loadAllNodes() {
     elements.metricsGrid.hidden = true;
     elements.allNodesContainer.hidden = false;
     elements.allNodesContainer.replaceChildren();
 
     try {
-        const response = await fetch("/api/nodes");
+        const response = await authenticatedFetch("/api/nodes");
 
         if (!response.ok) {
             throw new Error("No se pudieron consultar los nodos.");
@@ -242,10 +522,13 @@ async function loadAllNodes() {
 
         const nodes = await response.json();
 
+        if (!isAuthenticated) return;
+
         if (nodes.length === 0) {
             const message = document.createElement("p");
             message.textContent =
                 "Todavía no hay nodos con mediciones registradas.";
+
             elements.allNodesContainer.appendChild(message);
             return;
         }
@@ -260,6 +543,8 @@ async function loadAllNodes() {
             })
         );
 
+        if (!isAuthenticated) return;
+
         nodes.forEach((nodeId, index) => {
             const card = createNodeCard(nodeId, measurements[index]);
             elements.allNodesContainer.appendChild(card);
@@ -273,19 +558,26 @@ async function loadAllNodes() {
             "por cada nodo del cultivo.";
 
     } catch (error) {
+        if (!isAuthenticated) return;
+
         const message = document.createElement("p");
         message.textContent =
             "No fue posible cargar los datos de los nodos.";
+
         elements.allNodesContainer.appendChild(message);
     }
 }
 
+// ========================================
+// 10. ACTUALIZACIÓN DEL DASHBOARD
+// ========================================
+
 async function refreshDashboard() {
+    if (!isAuthenticated) return;
+
     await checkServerStatus();
 
-    if (!elements.nodeSelector) {
-        return;
-    }
+    if (!isAuthenticated) return;
 
     const selectedNode = elements.nodeSelector.value;
 
@@ -296,22 +588,48 @@ async function refreshDashboard() {
     }
 }
 
-// Cargamos la lista de nodos y después sus mediciones.
-async function initializeDashboard() {
+// Inicializamos las funciones del dashboard
+// únicamente después de confirmar la autenticación.
+
+async function initializeDashboardData() {
     if (!elements.nodeSelector) {
-        elements.systemMessage.textContent =
-            "No se encontró el selector de nodos en la página.";
+        console.error("No se encontró el selector de nodos.");
         return;
     }
 
     await loadNodes();
 
-    elements.nodeSelector.addEventListener("change", refreshDashboard);
+    if (!isAuthenticated) return;
+
+    elements.nodeSelector.removeEventListener(
+        "change",
+        refreshDashboard
+    );
+
+    elements.nodeSelector.addEventListener(
+        "change",
+        refreshDashboard
+    );
 
     await refreshDashboard();
+
+    // Evitamos crear varios temporizadores.
+    if (refreshTimer !== null) {
+        clearInterval(refreshTimer);
+    }
+
+    refreshTimer = setInterval(refreshDashboard, 15000);
 }
 
-initializeDashboard();
+// ========================================
+// 11. EVENTOS E INICIO DE LA APLICACIÓN
+// ========================================
 
-// Actualizamos los datos cada 15 segundos.
-setInterval(refreshDashboard, 15000);
+elements.loginForm.addEventListener("submit", login);
+
+elements.logoutButton.addEventListener("click", logout);
+
+// Al abrir la página, primero verificamos la sesión.
+// Solo después mostramos y cargamos el dashboard.
+
+checkCurrentSession();

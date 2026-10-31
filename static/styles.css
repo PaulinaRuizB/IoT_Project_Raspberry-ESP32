@@ -661,3 +661,206 @@ input {
 [hidden] {
     display: none !important;
 }
+
+/* ========================================
+   11. INICIO DE SESIÓN
+======================================== */
+
+.login-view {
+    min-height: 100vh;
+    width: 100%;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    padding: 24px;
+    background: var(--background);
+}
+
+.login-card {
+    width: 100%;
+    max-width: 420px;
+    padding: 38px;
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 22px;
+    box-shadow: var(--shadow);
+}
+
+.login-brand {
+    text-align: center;
+    margin-bottom: 32px;
+}
+
+.login-brand .brand-icon {
+    margin: 0 auto 12px;
+}
+
+.login-brand h1 {
+    margin: 0;
+    color: var(--green-dark);
+    font-size: 25px;
+}
+
+.login-brand p {
+    margin: 4px 0 0;
+    color: var(--text-muted);
+    font-size: 13px;
+}
+
+.login-heading {
+    margin-bottom: 24px;
+}
+
+.login-heading h2 {
+    margin: 0;
+    font-size: 22px;
+    color: var(--text-main);
+}
+
+.login-heading p {
+    margin: 7px 0 0;
+    color: var(--text-muted);
+    font-size: 13px;
+}
+
+.login-field {
+    display: flex;
+    flex-direction: column;
+    gap: 7px;
+    margin-bottom: 18px;
+}
+
+.login-field label {
+    font-size: 13px;
+    font-weight: 600;
+    color: var(--green-dark);
+}
+
+.login-field input {
+    width: 100%;
+    padding: 12px 14px;
+    border: 1px solid var(--border);
+    border-radius: 10px;
+    background: #ffffff;
+    color: var(--text-main);
+    outline: none;
+}
+
+.login-field input:focus {
+    border-color: var(--green-main);
+    box-shadow: 0 0 0 3px var(--green-light);
+}
+
+.login-button {
+    width: 100%;
+    padding: 13px;
+    border: none;
+    border-radius: 10px;
+    background: var(--green-main);
+    color: white;
+    font-weight: 600;
+    cursor: pointer;
+    transition: background 0.2s;
+}
+
+.login-button:hover {
+    background: var(--green-dark);
+}
+
+.login-button:disabled {
+    opacity: 0.6;
+    cursor: not-allowed;
+}
+
+.login-error {
+    margin: 0 0 15px;
+    color: #b42318;
+    font-size: 13px;
+}
+
+.login-footer {
+    margin: 25px 0 0;
+    text-align: center;
+    color: var(--text-muted);
+    font-size: 11px;
+}
+
+/* Información del usuario */
+
+.user-panel {
+    display: flex;
+    align-items: center;
+    gap: 14px;
+}
+
+.user-info {
+    display: flex;
+    flex-direction: column;
+    font-size: 12px;
+}
+
+.user-info strong {
+    color: var(--green-dark);
+}
+
+.user-info span {
+    color: var(--text-muted);
+}
+
+.logout-button {
+    padding: 9px 13px;
+    border: 1px solid var(--border);
+    border-radius: 9px;
+    background: white;
+    color: var(--green-dark);
+    font-size: 12px;
+    cursor: pointer;
+}
+
+.logout-button:hover {
+    background: var(--green-light);
+}
+
+@media (max-width: 720px) {
+    .login-card {
+        padding: 28px 22px;
+    }
+
+    .user-panel {
+        flex-wrap: wrap;
+    }
+}
+
+
+/* ========================================
+   12. DISTRIBUCIÓN DE LOGIN Y DASHBOARD
+======================================== */
+
+/* El contenedor principal no divide las vistas */
+.app-container {
+    display: block;
+    width: 100%;
+    min-height: 100vh;
+}
+
+/* La cuadrícula de dos columnas pertenece al dashboard */
+.dashboard-view {
+    display: grid;
+    grid-template-columns: 255px minmax(0, 1fr);
+    min-height: 100vh;
+    width: 100%;
+}
+
+/* Adaptación para tablets */
+@media (max-width: 1150px) {
+    .dashboard-view {
+        grid-template-columns: 215px minmax(0, 1fr);
+    }
+}
+
+/* Adaptación para móviles */
+@media (max-width: 720px) {
+    .dashboard-view {
+        grid-template-columns: 1fr;
+    }
+}

@@ -117,10 +117,6 @@ El archivo `iot_data.db` se genera durante la ejecución.
 
 ## 5. Entorno virtual de Python
 
-Un entorno virtual permite instalar y ejecutar dependencias de Python de forma aislada para un proyecto.
-
-En este proyecto se utiliza `venv`.
-
 Para activar el entorno virtual desde la raíz del proyecto:
 
     source venv/bin/activate
@@ -198,6 +194,10 @@ Se hizo la primera versión del dashboard intuitivo para agricultores con la sig
 
 Se hizo la primera prueba de enviar un dato al servidor (raspberry) por medio de un sensor BMP280 de temperatura y una ESP32C6. Por ahora, funciona de forma local con la dirección IP. Se actualizan los datos en el dashboard cada 5 segundos.  
 
+### Prueba 011 Implementación de inicios de sesión
+
+Se implementó una interfaz de inición de sesión con usuario y contraseña, en donde al ingresar como administrador se muestran todos los nodos (fincas) y al ingresar como agricultor solo se muestra una. 
+
 ## 11. Limitaciones actuales
 
 - No se ha implementado MQTT.
@@ -227,6 +227,21 @@ El servidor actual es una base funcional para continuar el desarrollo, pero toda
 14. Evaluar sincronización cuando exista conectividad.
 15. Realizar pruebas con usuarios y documentar los resultados.
 
-**Última actualización:** implementación inicial del dashboard. 
+**Última actualización:** implementación inicial del dashboard, un nodo con sensor BMP280 funcionando e inicios de sesión agregados con cuenta de admin y cuenta de agricultor. 
 
 **Estado general:** servidor y API de mediciones funcionando con datos de prueba; integración con sensores físicos BMP280 lista con ESP32C6 funcionando con red loca. Interfaz de dashboard sencilla con datos enviados en tiempo real. Implementación de autenticación con admin y agricultor. 
+
+# Estado actual del desarrollo
+
+Hasta esta etapa se cuenta con:
+
+- Servidor FastAPI funcionando en Raspberry Pi.
+- Base de datos SQLite inicializada.
+- Recepción y almacenamiento de mediciones.
+- Registro de fincas y nodos.
+- Sistema de autenticación con Argon2.
+- Gestión de sesiones mediante cookies.
+- Roles de administrador y agricultor.
+- Asociación de usuarios con fincas.
+- Filtrado de nodos y mediciones según los permisos del usuario.
+- Pruebas de inicio de sesión, cierre de sesión y separación de datos.

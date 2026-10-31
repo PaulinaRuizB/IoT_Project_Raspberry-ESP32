@@ -14,6 +14,59 @@
 <body>
     <div class="app-container">
 
+        <!-- Vista de inicio de sesión -->
+    <section id="login-view" class="login-view" hidden>
+        <div class="login-card">
+            <div class="login-brand">
+                <div class="brand-icon">🌱</div>
+                <h1>Mi Cultivo</h1>
+                <p>Monitoreo agrícola</p>
+            </div>
+
+            <div class="login-heading">
+                <h2>¡Bienvenido!</h2>
+                <p>Ingresa tus datos para consultar tu cultivo.</p>
+            </div>
+
+            <form id="login-form">
+                <div class="login-field">
+                    <label for="login-username">Usuario</label>
+                    <input
+                        type="text"
+                        id="login-username"
+                        name="username"
+                        placeholder="Ingresa tu usuario"
+                        autocomplete="username"
+                        required
+                    >
+                </div>
+
+                <div class="login-field">
+                    <label for="login-password">Contraseña</label>
+                    <input
+                        type="password"
+                        id="login-password"
+                        name="password"
+                        placeholder="Ingresa tu contraseña"
+                        autocomplete="current-password"
+                        required
+                    >
+                </div>
+
+                <p id="login-error" class="login-error" hidden></p>
+
+                <button type="submit" id="login-button" class="login-button">
+                    Iniciar sesión
+                </button>
+            </form>
+
+            <p class="login-footer">Sistema local de monitoreo agrícola</p>
+        </div>
+    </section>
+
+    <!-- Dashboard: solo visible con una sesión activa -->
+    <div id="dashboard-view" class="dashboard-view" hidden>
+
         <aside class="sidebar">
             <div class="brand">
                 <div class="brand-icon">🌱</div>
@@ -41,10 +94,21 @@
             <header class="topbar">
                 <div>
                     <p class="eyebrow">PANEL DE CONTROL</p>
-                    <h1>¡Hola, agricultor!</h1>
+                    <h1 id="welcome-message">¡Hola!</h1>
                     <p class="subtitle">
                         Aquí puedes consultar el estado de tu cultivo.
                     </p>
+                </div>
+
+                <div class="user-panel">
+                    <div class="user-info">
+                        <strong id="current-username">Usuario</strong>
+                        <span id="current-farm">Finca</span>
+                    </div>
+
+                    <button type="button" id="logout-button" class="logout-button">
+                        Cerrar sesión
+                    </button>
                 </div>
 
                 <div class="connection-badge" id="server-status">
@@ -149,6 +213,7 @@
             </footer>
 
         </main>
+        </div>
     </div>
 </body>
 </html>
