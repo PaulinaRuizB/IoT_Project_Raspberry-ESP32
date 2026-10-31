@@ -1,26 +1,29 @@
 
 from datetime import datetime, timezone
 
-from fastapi import FastAPI, HTTPException, Query
+from fastapi import FastAPI, HTTPException, Query, Depends
 from pydantic import BaseModel, Field
+from pathlib import Path
+from fastapi.staticfiles import StaticFiles
+from fastapi.responses import FileResponse
 
 from app.database import (
     initialize_database,
     save_measurement,
     get_measurements,
     get_latest_measurement,
-    get_latest_measurement,
     get_node_ids,
 )
 
-from pathlib import Path
-
-from fastapi.staticfiles import StaticFiles
-from fastapi.responses import FileResponse
+#conectarse al archivo de autenticación
+from app.auth import router as auth_router
+from app.auth import get_current_user
 
 app = FastAPI(title="IoT Server")
 BASE_DIR = Path(__file__).resolve().parent.parent
 STATIC_DIR = BASE_DIR / "static"
+app.include_router(auth_router) 
+
 
 app.mount(
     "/static",
@@ -86,25 +89,35 @@ def create_measurement(measurement: MeasurementInput):
 @app.get("/api/measurements")
 def list_measurements(
     limit: int = Query(default=50, ge=1, le=500),
-    node_id: str | None = Query(
-        default=None,
-        min_length=1,
-        max_length=50
-    ),
+    node_id: str | None = Query(default=None, min_length=1, max_length=50),
+    current_user: dict = Depends(get_current_user)
 ):
-    return get_measurements(limit=limit, node_id=node_id)
+    # Los administradores pueden consultar todas las fincas.
+    # Los agricultores solamente pueden consultar su propia finca.
+    farm_id = (
+        current_user["farm_id"]
+        if current_user["role"] == "farmer"
+        else None
+    )
 
+    return get_measurements(limit=limit, node_id=node_id, farm_id=farm_id )
 
 # Consultar la medición más reciente
 @app.get("/api/measurements/latest")
 def latest_measurement(
-    node_id: str | None = Query(
-        default=None,
-        min_length=1,
-        max_length=50
-    )
+    node_id: str | None = Query(default=None, min_length=1, max_length=50),
+    current_user: dict = Depends(get_current_user)
 ):
-    measurement = get_latest_measurement(node_id=node_id)
+    farm_id = (
+        current_user["farm_id"]
+        if current_user["role"] == "farmer"
+        else None
+    )
+
+    measurement = get_latest_measurement(
+        node_id=node_id,
+        farm_id=farm_id
+    )
 
     if measurement is None:
         raise HTTPException(
@@ -115,5 +128,13 @@ def latest_measurement(
     return measurement
 
 @app.get("/api/nodes")
-def list_nodes():
-    return get_node_ids()
+def list_nodes(
+    current_user: dict = Depends(get_current_user)
+):
+    farm_id = (
+        current_user["farm_id"]
+        if current_user["role"] == "farmer"
+        else None
+    )
+
+    return get_node_ids(farm_id=farm_id)
