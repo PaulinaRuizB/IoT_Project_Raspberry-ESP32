@@ -202,7 +202,6 @@ Se hizo la primera prueba de enviar un dato al servidor (raspberry) por medio de
 
 - No se ha implementado MQTT.
 - El mecanismo de comunicación de campo entre nodos y Raspberry Pi sigue pendiente de selección y validación.
-- No se ha implementado autenticación de usuarios.
 - No se han implementado recomendaciones agrícolas.
 - No se ha incorporado análisis de imágenes.
 - No se han realizado pruebas completas de campo sin Internet.
@@ -230,4 +229,4 @@ El servidor actual es una base funcional para continuar el desarrollo, pero toda
 
 **Última actualización:** implementación inicial del dashboard. 
 
-**Estado general:** servidor y API de mediciones funcionando con datos de prueba; integración con sensores físicos pendiente. Interfaz de dashboard sencilla con tarjetas de datos de pruebas. 
+**Estado general:** servidor y API de mediciones funcionando con datos de prueba; integración con sensores físicos BMP280 lista con ESP32C6 funcionando con red loca. Interfaz de dashboard sencilla con datos enviados en tiempo real. Implementación de autenticación con admin y agricultor. 
