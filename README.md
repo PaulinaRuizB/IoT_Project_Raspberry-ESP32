@@ -245,3 +245,4 @@ Hasta esta etapa se cuenta con:
 - Asociación de usuarios con fincas.
 - Filtrado de nodos y mediciones según los permisos del usuario.
 - Pruebas de inicio de sesión, cierre de sesión y separación de datos.
+- Inicios de sesión con cuentas de administrador y agricultor. El primero puede agregar, editar, desactivar o cambiar información de las demas cuentas. 

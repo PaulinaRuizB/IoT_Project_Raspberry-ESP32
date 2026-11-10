@@ -435,7 +435,7 @@ El script de agricultores:
 
 1. Solicita un nombre de usuario.
 2. Solicita y confirma una contraseña.
-3. Verifica que tenga al menos 12 caracteres.
+3. Verifica que tenga al menos 6 caracteres.
 4. Comprueba que la finca seleccionada exista.
 5. Comprueba que el nombre de usuario no esté registrado.
 6. Genera el hash Argon2.
@@ -450,3 +450,8 @@ python -m app.create_admin
 ```bash
 python -m app.create_farmer
 ```
+## 9.7 Gestión de cuentas desde la sesión de Admin
+
+Se implementaron dos tipos de sesiones: administrador y agricultor. Cada una cuenta con inicio de sesión con contraseña protegida por HASH.
+
+Desde la cuenta de Administrador es posible añadir nuevos agricultores, asignar fincas, editar información y activar o desactivar cuentas. 
