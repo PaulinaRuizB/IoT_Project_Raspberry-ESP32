@@ -76,10 +76,26 @@ function showDashboard(user) {
     elements.currentUsername.textContent = user.username;
     elements.currentFarm.textContent =
         user.farm_name || "Todas las fincas";
+    // Cargar los datos de la cuenta del administrador.
+    if (user.role === "admin") {
+        loadAccountInformation(user.username);
+    }
 
     if (elements.welcomeMessage) {
         elements.welcomeMessage.textContent =
             `¡Hola, ${user.username}!`;
+    }
+
+    // Mostrar u ocultar elementos exclusivos del administrador
+    const adminElements = document.querySelectorAll(".admin-only");
+
+    adminElements.forEach(element => {
+        element.hidden = user.role !== "admin";
+    });
+
+    // Cargar usuarios si la sesión pertenece a un administrador
+    if (user.role === "admin") {
+        loadUsers();
     }
 }
 
@@ -633,3 +649,811 @@ elements.logoutButton.addEventListener("click", logout);
 // Solo después mostramos y cargamos el dashboard.
 
 checkCurrentSession();
+
+//mostrar usuarios y agregarlos a la tabla en SQLite
+
+/// ========================================
+// GESTIÓN DE USUARIOS
+// ========================================
+
+async function loadUsers() {
+    const usersTableBody = document.getElementById("users-table-body");
+    const usersMessage = document.getElementById("users-message");
+
+    try {
+        usersMessage.textContent = "Cargando usuarios...";
+
+        const response = await authenticatedFetch("/api/admin/users");
+
+        if (!response.ok) {
+            throw new Error("No fue posible cargar los usuarios.");
+        }
+
+        const users = await response.json();
+
+        usersTableBody.replaceChildren();
+
+        if (users.length === 0) {
+            usersMessage.textContent = "No hay usuarios registrados.";
+            return;
+        }
+
+        users.forEach(user => {
+            const row = document.createElement("tr");
+
+            const username = document.createElement("td");
+            username.textContent = user.username;
+
+            const role = document.createElement("td");
+            role.textContent =
+                user.role === "admin" ? "Administrador" : "Agricultor";
+
+            const farm = document.createElement("td");
+            farm.textContent = user.farm_name || "Todas las fincas";
+
+            const status = document.createElement("td");
+
+            const statusBadge = document.createElement("span");
+
+            statusBadge.textContent =
+                user.is_active ? "Activo" : "Inactivo";
+
+            statusBadge.className = user.is_active
+                ? "user-status active"
+                : "user-status inactive";
+
+            status.appendChild(statusBadge);
+
+            const createdAt = document.createElement("td");
+            createdAt.textContent = user.created_at
+                ? new Date(user.created_at).toLocaleDateString("es-CO")
+                : "No disponible";
+
+            const actions = document.createElement("td");
+            if (user.role === "farmer") {
+
+                // Botón Editar
+                const editButton = document.createElement("button");
+
+                editButton.type = "button";
+                editButton.textContent = "Editar";
+                editButton.className = "user-edit-button";
+
+                editButton.addEventListener("click", () => {
+                    openEditUser(user);
+                });
+
+                // Botón Activar / Desactivar
+                const statusButton = document.createElement("button");
+
+                statusButton.type = "button";
+                statusButton.textContent = user.is_active
+                    ? "Desactivar"
+                    : "Activar";
+
+                statusButton.className = user.is_active
+                    ? "user-deactivate-button"
+                    : "user-activate-button";
+
+                statusButton.addEventListener("click", () => {
+                    changeUserStatus(user);
+                });
+
+                // Botón para restablecer contraseña
+                const resetButton = document.createElement("button");
+
+                resetButton.type = "button";
+                resetButton.textContent = "Restablecer contraseña";
+                resetButton.className = "user-reset-button";
+
+                resetButton.addEventListener("click", () => {
+                    openResetPassword(user);
+                });
+
+                actions.append(editButton, statusButton, resetButton);
+
+            } else {
+                actions.textContent = "—";
+            }
+
+            row.append(
+                username,
+                role,
+                farm,
+                status,
+                createdAt,
+                actions
+            );
+
+            usersTableBody.appendChild(row);
+        });
+
+        usersMessage.textContent =
+            `${users.length} usuario(s) registrado(s).`;
+
+    } catch (error) {
+        console.error("Error al cargar usuarios:", error);
+
+        usersMessage.textContent =
+            "No fue posible cargar la lista de usuarios.";
+    }
+}
+
+// ========================================
+// ABRIR FORMULARIO DE EDICIÓN
+// ========================================
+
+function openEditUser(user) {
+    const formContainer = document.getElementById(
+        "edit-user-form-container"
+    );
+
+    const userIdInput = document.getElementById("edit-user-id");
+    const usernameInput = document.getElementById("edit-username");
+    const farmSelect = document.getElementById("edit-farm");
+    const message = document.getElementById("edit-user-message");
+
+    // Cargar los datos actuales del agricultor
+    userIdInput.value = user.id;
+    usernameInput.value = user.username;
+    farmSelect.value = String(user.farm_id);
+
+    // Limpiar mensajes anteriores
+    message.textContent = "";
+
+    // Mostrar formulario
+    formContainer.hidden = false;
+
+    // Llevar la vista hasta el formulario
+    formContainer.scrollIntoView({
+        behavior: "smooth",
+        block: "center"
+    });
+}
+
+// ========================================
+// CANCELAR EDICIÓN
+// ========================================
+
+function cancelEditUser() {
+    const formContainer = document.getElementById(
+        "edit-user-form-container"
+    );
+
+    const form = document.getElementById("edit-user-form");
+
+    form.reset();
+
+    formContainer.hidden = true;
+}
+
+// ========================================
+// GUARDAR CAMBIOS DEL USUARIO
+// ========================================
+
+async function saveEditedUser(event) {
+    event.preventDefault();
+
+    const userId = document.getElementById("edit-user-id").value;
+    const username = document.getElementById("edit-username").value.trim();
+    const farmId = Number(document.getElementById("edit-farm").value);
+
+    const message = document.getElementById("edit-user-message");
+    const saveButton = document.querySelector(
+        "#edit-user-form button[type='submit']"
+    );
+
+    if (username.length < 3 || !farmId) {
+        message.textContent = "Completa correctamente todos los campos.";
+        return;
+    }
+
+    try {
+        saveButton.disabled = true;
+        message.textContent = "Guardando cambios...";
+
+        const response = await authenticatedFetch(
+            `/api/admin/users/${userId}`,
+            {
+                method: "PUT",
+                headers: {
+                    "Content-Type": "application/json"
+                },
+                body: JSON.stringify({
+                    username: username,
+                    farm_id: farmId
+                })
+            }
+        );
+
+        const result = await response.json();
+
+        if (!response.ok) {
+            throw new Error(
+                result.detail || "No fue posible actualizar el usuario."
+            );
+        }
+
+        message.textContent = "¡Usuario actualizado correctamente!";
+
+        // Actualizar la tabla con los nuevos datos
+        await loadUsers();
+
+        // Ocultar formulario
+        document.getElementById(
+            "edit-user-form-container"
+        ).hidden = true;
+
+    } catch (error) {
+        console.error("Error al actualizar usuario:", error);
+        message.textContent = error.message;
+
+    } finally {
+        saveButton.disabled = false;
+    }
+}
+
+// ========================================
+// EVENTOS DE EDICIÓN DE USUARIOS
+// ========================================
+
+document.getElementById("edit-user-form").addEventListener(
+    "submit",
+    saveEditedUser
+);
+
+document.getElementById("cancel-edit-user").addEventListener(
+    "click",
+    cancelEditUser
+);
+
+// ========================================
+// ACTIVAR / DESACTIVAR USUARIOS
+// ========================================
+
+async function changeUserStatus(user) {
+
+    const action = user.is_active
+        ? "desactivar"
+        : "activar";
+
+    const confirmed = window.confirm(
+        `¿Estás segura de que deseas ${action} la cuenta de ${user.username}?`
+    );
+
+    if (!confirmed) {
+        return;
+    }
+
+    try {
+
+        const response = await authenticatedFetch(
+            `/api/admin/users/${user.id}/status`,
+            {
+                method: "PATCH",
+                headers: {
+                    "Content-Type": "application/json"
+                },
+                body: JSON.stringify({
+                    is_active: !user.is_active
+                })
+            }
+        );
+
+        const result = await response.json();
+
+        if (!response.ok) {
+            throw new Error(
+                result.detail || "No fue posible cambiar el estado."
+            );
+        }
+
+        await loadUsers();
+
+    } catch (error) {
+
+        console.error("Error al cambiar estado:", error);
+
+        alert(error.message);
+    }
+}
+
+// ========================================
+// CREAR NUEVOS AGRICULTORES
+// ========================================
+
+const createUserContainer = document.getElementById(
+    "create-user-form-container"
+);
+
+const createUserForm = document.getElementById("create-user-form");
+
+const createUserMessage = document.getElementById("create-user-message");
+
+
+// Abrir formulario
+document.getElementById("create-user-button").addEventListener("click", () => {
+
+    // Ocultar los otros formularios
+    document.getElementById("edit-user-form-container").hidden = true;
+    document.getElementById("reset-password-form-container").hidden = true;
+
+    createUserForm.reset();
+    createUserMessage.textContent = "";
+
+    createUserContainer.hidden = false;
+
+    createUserContainer.scrollIntoView({
+        behavior: "smooth",
+        block: "center"
+    });
+});
+
+
+// Cancelar creación
+document.getElementById("cancel-create-user").addEventListener("click", () => {
+
+    createUserForm.reset();
+    createUserContainer.hidden = true;
+});
+
+
+// Enviar formulario
+createUserForm.addEventListener("submit", async (event) => {
+
+    event.preventDefault();
+
+    const username = document.getElementById("new-username").value.trim();
+
+    const password = document.getElementById("new-password").value;
+
+    const farmId = Number(document.getElementById("new-farm").value);
+
+    const submitButton = createUserForm.querySelector(
+        "button[type='submit']"
+    );
+
+    if (username.length < 3 || !farmId || !password.trim()) {
+        createUserMessage.textContent =
+            "Completa correctamente todos los campos.";
+        return;
+    }
+
+    if (password.length < 6 || password.length > 128) {
+        createUserMessage.textContent =
+            "La contraseña debe tener entre 6 y 128 caracteres.";
+        return;
+    }
+
+    try {
+
+        submitButton.disabled = true;
+        createUserMessage.textContent = "Creando agricultor...";
+
+        const response = await authenticatedFetch(
+            "/api/admin/users",
+            {
+                method: "POST",
+                headers: {
+                    "Content-Type": "application/json"
+                },
+                body: JSON.stringify({
+                    username: username,
+                    password: password,
+                    farm_id: farmId
+                })
+            }
+        );
+
+        const result = await response.json();
+
+        if (!response.ok) {
+            throw new Error(
+                result.detail || "No fue posible crear el agricultor."
+            );
+        }
+
+        createUserMessage.textContent =
+            "¡Agricultor creado correctamente!";
+
+        createUserForm.reset();
+
+        await loadUsers();
+
+    } catch (error) {
+
+        console.error("Error al crear agricultor:", error);
+
+        createUserMessage.textContent = error.message;
+
+    } finally {
+
+        submitButton.disabled = false;
+    }
+});
+
+
+// ========================================
+// RESTABLECER CONTRASEÑAS
+// ========================================
+
+const resetPasswordContainer = document.getElementById(
+    "reset-password-form-container"
+);
+
+const resetPasswordForm = document.getElementById(
+    "reset-password-form"
+);
+
+const resetPasswordMessage = document.getElementById(
+    "reset-password-message"
+);
+
+
+// Abrir formulario
+function openResetPassword(user) {
+
+    // Ocultar otros formularios
+    document.getElementById("edit-user-form-container").hidden = true;
+    createUserContainer.hidden = true;
+
+    resetPasswordForm.reset();
+    resetPasswordMessage.textContent = "";
+
+    document.getElementById("reset-password-user-id").value = user.id;
+
+    document.getElementById("reset-password-username").textContent =
+        `Nueva contraseña para: ${user.username}`;
+
+    resetPasswordContainer.hidden = false;
+
+    resetPasswordContainer.scrollIntoView({
+        behavior: "smooth",
+        block: "center"
+    });
+}
+
+
+// Cancelar restablecimiento
+document.getElementById("cancel-reset-password").addEventListener(
+    "click",
+    () => {
+
+        resetPasswordForm.reset();
+        resetPasswordContainer.hidden = true;
+    }
+);
+
+
+// Guardar nueva contraseña
+resetPasswordForm.addEventListener("submit", async (event) => {
+
+    event.preventDefault();
+
+    const userId = document.getElementById(
+        "reset-password-user-id"
+    ).value;
+
+    const password = document.getElementById(
+        "reset-new-password"
+    ).value;
+
+    const submitButton = resetPasswordForm.querySelector(
+        "button[type='submit']"
+    );
+
+    if (!password.trim()) {
+        resetPasswordMessage.textContent =
+            "La contraseña no puede estar vacía.";
+        return;
+    }
+
+    if (password.length < 6 || password.length > 128) {
+        resetPasswordMessage.textContent =
+            "La contraseña debe tener entre 6 y 128 caracteres.";
+        return;
+    }
+
+    const confirmed = window.confirm(
+        "¿Estás segura de que deseas restablecer la contraseña? " +
+        "El agricultor deberá iniciar sesión nuevamente."
+    );
+
+    if (!confirmed) {
+        return;
+    }
+
+    try {
+
+        submitButton.disabled = true;
+
+        resetPasswordMessage.textContent =
+            "Actualizando contraseña...";
+
+        const response = await authenticatedFetch(
+            `/api/admin/users/${userId}/password`,
+            {
+                method: "PUT",
+                headers: {
+                    "Content-Type": "application/json"
+                },
+                body: JSON.stringify({
+                    password: password
+                })
+            }
+        );
+
+        const result = await response.json();
+
+        if (!response.ok) {
+            throw new Error(
+                result.detail ||
+                "No fue posible restablecer la contraseña."
+            );
+        }
+
+        resetPasswordMessage.textContent =
+            "¡Contraseña restablecida correctamente!";
+
+        resetPasswordForm.reset();
+
+    } catch (error) {
+
+        console.error("Error al restablecer contraseña:", error);
+
+        resetPasswordMessage.textContent = error.message;
+
+    } finally {
+
+        submitButton.disabled = false;
+    }
+});
+
+// ========================================
+// MI CUENTA - ADMINISTRADOR
+// ========================================
+
+// ========================================
+// CAMBIAR NOMBRE DE USUARIO
+// ========================================
+
+const changeUsernameForm = document.getElementById(
+    "change-username-form"
+);
+
+const changeUsernameMessage = document.getElementById(
+    "change-username-message"
+);
+
+
+// Al abrir el formulario, mostramos el usuario actual.
+function loadAccountInformation(username) {
+
+    document.getElementById(
+        "account-current-username"
+    ).textContent = username;
+
+    document.getElementById(
+        "account-new-username"
+    ).value = username;
+}
+
+
+// Enviar solicitud para cambiar el usuario.
+changeUsernameForm.addEventListener("submit", async (event) => {
+
+    event.preventDefault();
+
+    const username = document.getElementById(
+        "account-new-username"
+    ).value.trim();
+
+    const submitButton = changeUsernameForm.querySelector(
+        "button[type='submit']"
+    );
+
+    if (username.length < 3 || username.length > 50) {
+
+        changeUsernameMessage.textContent =
+            "El nombre de usuario debe tener entre 3 y 50 caracteres.";
+
+        return;
+    }
+
+    try {
+
+        submitButton.disabled = true;
+
+        changeUsernameMessage.textContent =
+            "Actualizando nombre de usuario...";
+
+        const response = await authenticatedFetch(
+            "/api/auth/me/username",
+            {
+                method: "PUT",
+
+                headers: {
+                    "Content-Type": "application/json"
+                },
+
+                body: JSON.stringify({
+                    username: username
+                })
+            }
+        );
+
+        const result = await response.json();
+
+        if (!response.ok) {
+
+            throw new Error(
+                result.detail ||
+                "No fue posible cambiar el nombre de usuario."
+            );
+        }
+
+        // Actualizamos el nombre en toda la interfaz.
+        const updatedUsername = result.user.username;
+
+        elements.currentUsername.textContent = updatedUsername;
+
+        elements.welcomeMessage.textContent =
+            `¡Hola, ${updatedUsername}!`;
+
+        document.getElementById(
+            "account-current-username"
+        ).textContent = updatedUsername;
+
+        document.getElementById(
+            "account-new-username"
+        ).value = updatedUsername;
+
+        changeUsernameMessage.textContent =
+            "¡Nombre de usuario actualizado correctamente!";
+
+    } catch (error) {
+
+        console.error("Error al cambiar el usuario:", error);
+
+        changeUsernameMessage.textContent = error.message;
+
+    } finally {
+
+        submitButton.disabled = false;
+    }
+});
+
+
+// ========================================
+// CAMBIAR CONTRASEÑA
+// ========================================
+
+const changePasswordForm = document.getElementById(
+    "change-password-form"
+);
+
+const changePasswordMessage = document.getElementById(
+    "change-password-message"
+);
+
+
+changePasswordForm.addEventListener("submit", async (event) => {
+
+    event.preventDefault();
+
+    const currentPassword = document.getElementById(
+        "account-current-password"
+    ).value;
+
+    const newPassword = document.getElementById(
+        "account-new-password"
+    ).value;
+
+    const confirmPassword = document.getElementById(
+        "account-confirm-password"
+    ).value;
+
+    const submitButton = changePasswordForm.querySelector(
+        "button[type='submit']"
+    );
+
+
+    // Validaciones antes de enviar los datos.
+
+    if (!currentPassword.trim()) {
+
+        changePasswordMessage.textContent =
+            "Debes ingresar tu contraseña actual.";
+
+        return;
+    }
+
+    if (newPassword.length < 6 || newPassword.length > 128) {
+
+        changePasswordMessage.textContent =
+            "La nueva contraseña debe tener entre 6 y 128 caracteres.";
+
+        return;
+    }
+
+    if (!newPassword.trim()) {
+
+        changePasswordMessage.textContent =
+            "La nueva contraseña no puede estar vacía.";
+
+        return;
+    }
+
+    if (newPassword !== confirmPassword) {
+
+        changePasswordMessage.textContent =
+            "Las nuevas contraseñas no coinciden.";
+
+        return;
+    }
+
+    if (currentPassword === newPassword) {
+
+        changePasswordMessage.textContent =
+            "La nueva contraseña debe ser diferente a la actual.";
+
+        return;
+    }
+
+
+    try {
+
+        submitButton.disabled = true;
+
+        changePasswordMessage.textContent =
+            "Actualizando contraseña...";
+
+        const response = await authenticatedFetch(
+            "/api/auth/me/password",
+            {
+                method: "PUT",
+
+                headers: {
+                    "Content-Type": "application/json"
+                },
+
+                body: JSON.stringify({
+                    current_password: currentPassword,
+                    new_password: newPassword
+                })
+            }
+        );
+
+        const result = await response.json();
+
+        if (!response.ok) {
+
+            throw new Error(
+                result.detail ||
+                "No fue posible cambiar la contraseña."
+            );
+        }
+
+        // Limpiamos los campos por seguridad.
+        changePasswordForm.reset();
+
+        // El servidor ya invalidó las sesiones anteriores
+        // y eliminó la cookie de autenticación.
+        // Por eso regresamos al inicio de sesión.
+
+        showLogin(
+            "¡Contraseña actualizada correctamente! " +
+            "Inicia sesión con tu nueva contraseña."
+        );
+
+    } catch (error) {
+
+        console.error("Error al cambiar la contraseña:", error);
+
+        changePasswordMessage.textContent = error.message;
+
+    } finally {
+
+        submitButton.disabled = false;
+    }
+});

@@ -864,3 +864,799 @@ input {
         grid-template-columns: 1fr;
     }
 }
+
+
+/* ========================================
+   GESTIÓN DE USUARIOS
+======================================== */
+
+.users-table-container {
+    width: 100%;
+    overflow-x: auto;
+    margin-top: 20px;
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    background: var(--surface);
+    box-shadow: var(--shadow);
+}
+
+.users-table {
+    width: 100%;
+    border-collapse: collapse;
+    min-width: 650px;
+    background: var(--surface);
+}
+
+/* Encabezados */
+.users-table thead {
+    background: var(--green-dark);
+    color: var(--surface);
+}
+
+.users-table th {
+    padding: 16px 18px;
+    text-align: left;
+    font-size: 13px;
+    font-weight: 600;
+    white-space: nowrap;
+}
+
+/* Celdas */
+.users-table td {
+    padding: 15px 18px;
+    border-bottom: 1px solid var(--border);
+    color: var(--text-main);
+    font-size: 14px;
+}
+
+/* Filas alternas */
+.users-table tbody tr:nth-child(even) {
+    background: var(--green-soft);
+}
+
+.users-table tbody tr:hover {
+    background: var(--green-light);
+    transition: background 0.2s ease;
+}
+
+.users-table tbody tr:last-child td {
+    border-bottom: none;
+}
+
+/* ========================================
+   BOTÓN EDITAR
+======================================== */
+
+.users-table button {
+    background: var(--green-light);
+    color: var(--green-dark);
+    border: 1px solid var(--border);
+    border-radius: 10px;
+    padding: 9px 17px;
+    font-size: 13px;
+    font-weight: 600;
+    cursor: pointer;
+    transition: all 0.2s ease;
+}
+
+.users-table button:hover {
+    background: var(--green-main);
+    color: var(--surface);
+    border-color: var(--green-main);
+    transform: translateY(-1px);
+}
+
+.users-table button:active {
+    transform: scale(0.97);
+}
+
+/* ========================================
+   FORMULARIO DE EDICIÓN
+======================================== */
+
+#edit-user-form-container {
+    margin-top: 28px;
+    padding: 26px;
+    background: var(--green-soft);
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    box-shadow: var(--shadow);
+    animation: showEditForm 0.25s ease;
+}
+
+#edit-user-form-container[hidden] {
+    display: none !important;
+}
+
+#edit-user-form-container h3 {
+    margin-top: 0;
+    margin-bottom: 22px;
+    color: var(--green-dark);
+    font-size: 20px;
+}
+
+/* Organización del formulario */
+#edit-user-form {
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+    max-width: 500px;
+}
+
+#edit-user-form label {
+    margin-top: 8px;
+    color: var(--text-main);
+    font-size: 14px;
+    font-weight: 600;
+}
+
+/* Campos */
+#edit-user-form input:not([type="hidden"]),
+#edit-user-form select {
+    width: 100%;
+    box-sizing: border-box;
+    padding: 13px 15px;
+    border: 1px solid var(--border);
+    border-radius: 10px;
+    background: var(--surface);
+    color: var(--text-main);
+    font-size: 14px;
+    outline: none;
+    transition: border-color 0.2s, box-shadow 0.2s;
+}
+
+#edit-user-form input:focus,
+#edit-user-form select:focus {
+    border-color: var(--green-main);
+    box-shadow: 0 0 0 3px rgba(52, 118, 83, 0.12);
+}
+
+/* ========================================
+   BOTONES DEL FORMULARIO
+======================================== */
+
+#edit-user-form > div {
+    display: flex;
+    gap: 12px;
+    margin-top: 16px;
+    flex-wrap: wrap;
+}
+
+#edit-user-form button {
+    padding: 12px 21px;
+    border-radius: 10px;
+    border: none;
+    font-size: 14px;
+    font-weight: 600;
+    cursor: pointer;
+    transition: all 0.2s ease;
+}
+
+/* Guardar */
+#edit-user-form button[type="submit"] {
+    background: var(--green-main);
+    color: var(--surface);
+}
+
+#edit-user-form button[type="submit"]:hover {
+    background: var(--green-dark);
+    transform: translateY(-1px);
+}
+
+/* Cancelar */
+#cancel-edit-user {
+    background: var(--surface);
+    color: var(--text-muted);
+    border: 1px solid var(--border) !important;
+}
+
+#cancel-edit-user:hover {
+    background: var(--background);
+    color: var(--text-main);
+}
+
+/* Botón deshabilitado */
+#edit-user-form button:disabled {
+    opacity: 0.6;
+    cursor: not-allowed;
+    transform: none;
+}
+
+/* Mensajes */
+#edit-user-message {
+    margin-top: 12px;
+    font-size: 14px;
+    color: var(--text-muted);
+}
+
+/* Mensaje de usuarios */
+#users-message {
+    color: var(--text-muted);
+    font-size: 14px;
+}
+
+/* Animación */
+@keyframes showEditForm {
+    from {
+        opacity: 0;
+        transform: translateY(8px);
+    }
+
+    to {
+        opacity: 1;
+        transform: translateY(0);
+    }
+}
+
+/* ========================================
+   DISEÑO RESPONSIVE
+======================================== */
+
+@media (max-width: 600px) {
+    #edit-user-form-container {
+        padding: 18px;
+    }
+
+    #edit-user-form > div {
+        flex-direction: column;
+    }
+
+    #edit-user-form button {
+        width: 100%;
+    }
+
+    .users-table th,
+    .users-table td {
+        padding: 12px;
+        font-size: 13px;
+    }
+}
+
+/* ========================================
+   ESTADOS DE USUARIOS
+======================================== */
+
+.user-status {
+    display: inline-block;
+    padding: 6px 12px;
+    border-radius: 20px;
+    font-size: 12px;
+    font-weight: 600;
+}
+
+.user-status.active {
+    background: var(--green-light);
+    color: var(--green-dark);
+}
+
+.user-status.inactive {
+    background: var(--orange-soft);
+    color: #a45a24;
+}
+
+/* ========================================
+   BOTONES DE ACCIONES
+======================================== */
+
+.users-table .user-edit-button,
+.users-table .user-deactivate-button,
+.users-table .user-activate-button {
+    margin: 3px;
+    padding: 8px 13px;
+    border-radius: 9px;
+    font-size: 12px;
+    font-weight: 600;
+}
+
+/* Editar */
+.users-table .user-edit-button {
+    background: var(--green-light);
+    color: var(--green-dark);
+}
+
+/* Desactivar */
+.users-table .user-deactivate-button {
+    background: var(--orange-soft);
+    color: #a45a24;
+    border-color: transparent;
+}
+
+.users-table .user-deactivate-button:hover {
+    background: #f4d9c5;
+    color: #82431b;
+    border-color: transparent;
+}
+
+/* Activar */
+.users-table .user-activate-button {
+    background: var(--green-main);
+    color: var(--surface);
+    border-color: transparent;
+}
+
+.users-table .user-activate-button:hover {
+    background: var(--green-dark);
+    color: var(--surface);
+    border-color: transparent;
+}
+
+/* ========================================
+   CREACIÓN Y RESTABLECIMIENTO DE USUARIOS
+======================================== */
+
+.admin-primary-button {
+    padding: 12px 18px;
+    border: none;
+    border-radius: 10px;
+    background: var(--green-main);
+    color: white;
+    font-size: 13px;
+    font-weight: 600;
+    cursor: pointer;
+    transition: background 0.2s, transform 0.2s;
+}
+
+.admin-primary-button:hover {
+    background: var(--green-dark);
+    transform: translateY(-1px);
+}
+
+/* Contenedores de formularios administrativos */
+
+.admin-form-container {
+    margin-top: 25px;
+    padding: 26px;
+    background: var(--green-soft);
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    box-shadow: var(--shadow);
+    animation: showEditForm 0.25s ease;
+}
+
+.admin-form-container[hidden] {
+    display: none !important;
+}
+
+.admin-form-container h3 {
+    margin-top: 0;
+    margin-bottom: 18px;
+    color: var(--green-dark);
+    font-size: 20px;
+}
+
+.admin-form-container > p {
+    color: var(--text-muted);
+    font-size: 13px;
+}
+
+/* Formularios */
+
+.admin-form-container form {
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+    max-width: 500px;
+}
+
+.admin-form-container label {
+    margin-top: 8px;
+    color: var(--text-main);
+    font-size: 14px;
+    font-weight: 600;
+}
+
+.admin-form-container input,
+.admin-form-container select {
+    width: 100%;
+    padding: 13px 15px;
+    border: 1px solid var(--border);
+    border-radius: 10px;
+    background: var(--surface);
+    color: var(--text-main);
+    font-size: 14px;
+    outline: none;
+}
+
+.admin-form-container input:focus,
+.admin-form-container select:focus {
+    border-color: var(--green-main);
+    box-shadow: 0 0 0 3px rgba(52, 118, 83, 0.12);
+}
+
+/* Botones */
+
+.admin-form-container form > div {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 12px;
+    margin-top: 16px;
+}
+
+.admin-form-container button {
+    padding: 12px 20px;
+    border: none;
+    border-radius: 10px;
+    font-size: 14px;
+    font-weight: 600;
+    cursor: pointer;
+}
+
+.admin-form-container button[type="submit"] {
+    background: var(--green-main);
+    color: white;
+}
+
+.admin-form-container button[type="submit"]:hover {
+    background: var(--green-dark);
+}
+
+.admin-form-container button[type="button"] {
+    background: white;
+    color: var(--text-muted);
+    border: 1px solid var(--border);
+}
+
+.admin-form-container button:disabled {
+    opacity: 0.6;
+    cursor: not-allowed;
+}
+
+/* Botón de restablecimiento en la tabla */
+
+.users-table .user-reset-button {
+    margin: 3px;
+    padding: 8px 13px;
+    border-radius: 9px;
+    background: var(--blue-soft);
+    color: #315d85;
+    border: 1px solid transparent;
+    font-size: 12px;
+}
+
+.users-table .user-reset-button:hover {
+    background: #d5e7f8;
+    color: #234666;
+    border-color: transparent;
+}
+
+/* Adaptación móvil */
+
+@media (max-width: 600px) {
+    .admin-form-container {
+        padding: 18px;
+    }
+
+    .admin-form-container form > div {
+        flex-direction: column;
+    }
+
+    .admin-form-container button {
+        width: 100%;
+    }
+
+    .admin-primary-button {
+        width: 100%;
+    }
+}
+
+/* ========================================
+   MI CUENTA - ADMINISTRADOR
+======================================== */
+
+/* Información de la cuenta */
+
+.account-info-card {
+    margin-bottom: 25px;
+    background: linear-gradient(
+        120deg,
+        #ffffff,
+        #f3f8f1
+    );
+}
+
+.account-info-card > div:first-child {
+    display: block;
+}
+
+.account-info-card > div:first-child strong {
+    color: var(--green-dark);
+    font-size: 16px;
+}
+
+.account-info-card > div:first-child p {
+    margin: 5px 0 0;
+}
+
+.account-details {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 15px 40px;
+    margin-top: 20px;
+    padding-top: 17px;
+    border-top: 1px solid var(--border);
+}
+
+.account-details p {
+    margin: 0 !important;
+    color: var(--text-muted);
+    font-size: 13px;
+}
+
+.account-details strong {
+    color: var(--green-dark);
+}
+
+/* Formularios de configuración de cuenta */
+
+.account-form-card {
+    max-width: 750px;
+}
+
+.account-form-card > p {
+    margin-left: 0;
+    line-height: 1.6;
+}
+
+.account-form-card form {
+    max-width: 100%;
+}
+
+.account-form-card input {
+    transition: border-color 0.2s, box-shadow 0.2s;
+}
+
+.account-form-card input:focus {
+    border-color: var(--green-main);
+    box-shadow: 0 0 0 3px rgba(52, 118, 83, 0.12);
+}
+
+/* Acciones de los formularios */
+
+.account-form-actions {
+    display: flex;
+    justify-content: flex-start;
+    margin-top: 8px;
+}
+
+.account-form-actions button {
+    min-width: 190px;
+}
+
+/* Mensajes de respuesta */
+
+#change-username-message,
+#change-password-message {
+    margin: 8px 0 0;
+    font-size: 13px;
+    line-height: 1.5;
+}
+
+/* Adaptación para móviles */
+
+@media (max-width: 600px) {
+
+    .account-details {
+        flex-direction: column;
+        gap: 12px;
+    }
+
+    .account-form-actions {
+        flex-direction: column;
+    }
+
+    .account-form-actions button {
+        width: 100%;
+    }
+}
+
+/* Ajustes táctiles y de lectura para el dashboard en móviles */
+@media (max-width: 720px) {
+    html {
+        scroll-padding-top: 140px;
+    }
+
+    .sidebar {
+        position: sticky;
+        top: 0;
+        z-index: 10;
+        padding: 12px 16px 8px;
+        gap: 12px;
+    }
+
+    .navigation {
+        scrollbar-width: thin;
+        scrollbar-color: #b7cdbd transparent;
+        scroll-snap-type: x proximity;
+    }
+
+    .nav-link {
+        min-height: 44px;
+        justify-content: center;
+        scroll-snap-align: start;
+    }
+
+    .user-panel {
+        width: 100%;
+        justify-content: space-between;
+        gap: 12px;
+    }
+
+    .user-info {
+        min-width: 0;
+    }
+
+    .user-info strong,
+    .user-info span {
+        overflow-wrap: anywhere;
+    }
+
+    .logout-button {
+        min-height: 44px;
+        padding: 10px 14px;
+        flex-shrink: 0;
+    }
+
+    .connection-badge {
+        min-height: 40px;
+    }
+
+    .node-filter {
+        width: 100%;
+        max-width: none;
+    }
+
+    .node-filter select {
+        min-height: 44px;
+    }
+}
+
+@media (max-width: 600px) {
+    .users-table-container {
+        overflow: visible;
+        border: 0;
+        background: transparent;
+        box-shadow: none;
+    }
+
+    .users-table {
+        display: block;
+        min-width: 0;
+    }
+
+    .users-table thead {
+        position: absolute;
+        width: 1px;
+        height: 1px;
+        padding: 0;
+        margin: -1px;
+        overflow: hidden;
+        clip: rect(0, 0, 0, 0);
+        white-space: nowrap;
+        border: 0;
+    }
+
+    .users-table tbody {
+        display: grid;
+        gap: 14px;
+    }
+
+    .users-table tbody tr {
+        display: block;
+        padding: 8px;
+        border: 1px solid var(--border);
+        border-radius: var(--radius);
+        background: var(--surface);
+        box-shadow: var(--shadow);
+    }
+
+    .users-table tbody tr:nth-child(even) {
+        background: var(--surface);
+    }
+
+    .users-table tbody tr:hover {
+        background: var(--surface);
+    }
+
+    .users-table tbody td {
+        display: flex;
+        justify-content: space-between;
+        gap: 12px;
+        padding: 10px 8px;
+        border-bottom: 1px solid var(--border);
+        overflow-wrap: anywhere;
+    }
+
+    .users-table tbody td::before {
+        flex: 0 0 90px;
+        color: var(--text-muted);
+        font-size: 12px;
+        font-weight: 600;
+    }
+
+    .users-table tbody td:nth-child(1)::before {
+        content: "Usuario";
+    }
+
+    .users-table tbody td:nth-child(2)::before {
+        content: "Rol";
+    }
+
+    .users-table tbody td:nth-child(3)::before {
+        content: "Finca";
+    }
+
+    .users-table tbody td:nth-child(4)::before {
+        content: "Estado";
+    }
+
+    .users-table tbody td:nth-child(5)::before {
+        content: "Creación";
+    }
+
+    .users-table tbody td:last-child {
+        display: block;
+        border-bottom: 0;
+    }
+
+    .users-table tbody td:last-child::before {
+        display: block;
+        margin-bottom: 8px;
+        content: "Acciones";
+    }
+
+    .users-table button {
+        min-height: 44px;
+        margin: 3px 4px 3px 0;
+        padding: 9px 12px;
+    }
+}
+
+@media (max-width: 420px) {
+    .main-content {
+        padding: 20px 14px;
+    }
+
+    .metrics-grid {
+        grid-template-columns: minmax(0, 1fr);
+        gap: 12px;
+    }
+
+    .metric-card {
+        display: grid;
+        grid-template-columns: 44px minmax(0, 1fr);
+        column-gap: 12px;
+        align-items: center;
+        padding: 14px;
+    }
+
+    .metric-icon {
+        grid-row: span 2;
+        margin: 0;
+    }
+
+    .metric-title,
+    .metric-value {
+        grid-column: 2;
+    }
+
+    .metric-value {
+        margin: 2px 0 0;
+    }
+
+    .metric-description {
+        grid-column: 2;
+        margin: 4px 0 0;
+    }
+
+    .metric-title {
+        font-size: 12px;
+    }
+
+    .metric-value {
+        font-size: 27px;
+    }
+
+    .section {
+        margin-bottom: 28px;
+    }
+}

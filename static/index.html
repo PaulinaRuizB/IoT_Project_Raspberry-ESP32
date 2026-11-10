@@ -81,6 +81,13 @@
                 <a href="#mediciones" class="nav-link">💧 Mediciones</a>
                 <a href="#recomendaciones" class="nav-link">🌿 Recomendaciones</a>
                 <a href="#sistema" class="nav-link">📡 Estado del sistema</a>
+                <!-- Solo visible para administradores -->
+                <a href="#usuarios" class="nav-link admin-only" hidden>
+                    👥 Gestión de usuarios
+                </a>
+                <a href="#mi-cuenta" class="nav-link admin-only" hidden>
+                    ⚙️ Mi cuenta
+                </a>
             </nav>
 
             <div class="sidebar-footer">
@@ -206,6 +213,333 @@
                         Comprobando conexión con el servidor...
                     </p>
                 </article>
+            </section>
+            <!-- Gestión de usuarios: solo administradores -->
+            <section class="section admin-only" id="usuarios" hidden>
+
+                <div class="section-heading">
+                
+                    <div>
+                        <h2>Gestión de usuarios</h2>
+                        <p>Administra las cuentas y los accesos a las fincas.</p>
+                    </div>
+
+                    <button
+                        type="button"
+                        id="create-user-button"
+                        class="admin-primary-button"
+                    >
+                        + Crear agricultor
+                    </button>
+                </div>
+
+                <div class="system-card">
+                    <div>
+                        <strong>Usuarios registrados</strong>
+                        <p>Listado de usuarios de la plataforma.</p>
+                    </div>
+
+                    <div id="users-message">
+                        Cargando usuarios...
+                    </div>
+
+                    <div class="users-table-container">
+                        <table class="users-table">
+                            <thead>
+                                <tr>
+                                    <th>Usuario</th>
+                                    <th>Rol</th>
+                                    <th>Finca</th>
+                                    <th>Estado</th>
+                                    <th>Creación</th>
+                                    <th>Acciones</th>
+                                </tr>
+                            </thead>
+
+                            <tbody id="users-table-body">
+                            </tbody>
+                        </table>
+                    </div>
+
+                    <!-- Formulario para editar agricultores -->
+                    <div id="edit-user-form-container" hidden>
+
+                        <h3>Editar agricultor</h3>
+
+                        <form id="edit-user-form">
+
+                            <input
+                                type="hidden"
+                                id="edit-user-id"
+                            >
+
+                            <label for="edit-username">
+                                Nombre de usuario
+                            </label>
+
+                            <input
+                                type="text"
+                                id="edit-username"
+                                minlength="3"
+                                maxlength="50"
+                                required
+                            >
+
+                            <label for="edit-farm">
+                                Finca asignada
+                            </label>
+
+                            <select id="edit-farm" required>
+                                <option value="">Selecciona una finca</option>
+                                <option value="1">Finca 01</option>
+                                <option value="2">Finca 02</option>
+                                <option value="3">Finca 03</option>
+                            </select>
+
+                            <div>
+                                <button type="submit">
+                                    Guardar cambios
+                                </button>
+
+                                <button
+                                    type="button"
+                                    id="cancel-edit-user"
+                                >
+                                    Cancelar
+                                </button>
+                            </div>
+
+                            <p id="edit-user-message"></p>
+
+                        </form>
+                    </div>
+                </div>
+                
+                <!-- Formulario para crear agricultores -->
+                <div id="create-user-form-container" class="admin-form-container" hidden>
+
+                    <h3>Registrar nuevo agricultor</h3>
+
+                    <form id="create-user-form">
+
+                        <label for="new-username">Nombre de usuario</label>
+                        <input
+                            type="text"
+                            id="new-username"
+                            minlength="3"
+                            maxlength="50"
+                            placeholder="Ej. agricultor01"
+                            required
+                        >
+
+                        <label for="new-password">Contraseña inicial</label>
+                        <input
+                            type="password"
+                            id="new-password"
+                            minlength="6"
+                            maxlength="128"
+                            placeholder="Mínimo 6 caracteres"
+                            autocomplete="new-password"
+                            required
+                        >
+
+                        <label for="new-farm">Finca asignada</label>
+                        <select id="new-farm" required>
+                            <option value="">Selecciona una finca</option>
+                            <option value="1">Finca 01</option>
+                            <option value="2">Finca 02</option>
+                            <option value="3">Finca 03</option>
+                        </select>
+
+                        <div>
+                            <button type="submit">Crear agricultor</button>
+
+                            <button
+                                type="button"
+                                id="cancel-create-user"
+                            >
+                                Cancelar
+                            </button>
+                        </div>
+
+                        <p id="create-user-message"></p>
+
+                    </form>
+                </div>
+                
+                 <!-- Formulario para restablecer contraseñas -->
+                <div id="reset-password-form-container" class="admin-form-container" hidden>
+
+                    <h3>Restablecer contraseña</h3>
+
+                    <p id="reset-password-username"></p>
+
+                    <form id="reset-password-form">
+
+                        <input
+                            type="hidden"
+                            id="reset-password-user-id"
+                        >
+
+                        <label for="reset-new-password">Nueva contraseña</label>
+                        <input
+                            type="password"
+                            id="reset-new-password"
+                            minlength="6"
+                            maxlength="128"
+                            placeholder="Mínimo 6 caracteres"
+                            autocomplete="new-password"
+                            required
+                        >
+
+                        <div>
+                            <button type="submit">Guardar nueva contraseña</button>
+
+                            <button
+                                type="button"
+                                id="cancel-reset-password"
+                            >
+                                Cancelar
+                            </button>
+                        </div>
+
+                        <p id="reset-password-message"></p>
+
+                    </form>
+                </div>
+
+            </section>
+
+            <!-- Configuración de la cuenta del administrador -->
+            <section class="section admin-only" id="mi-cuenta" hidden>
+
+                <div class="section-heading">
+                    <div>
+                        <h2>Mi cuenta</h2>
+                        <p>Administra tus credenciales de acceso a la plataforma.</p>
+                    </div>
+                </div>
+
+                <!-- Información de la cuenta -->
+                <article class="system-card account-info-card">
+                    <div>
+                        <strong>Información de la cuenta</strong>
+                        <p>Datos de tu perfil de administrador.</p>
+                    </div>
+
+                    <div class="account-details">
+                        <p>
+                            <strong>Usuario actual:</strong>
+                            <span id="account-current-username">Administrador</span>
+                        </p>
+
+                        <p>
+                            <strong>Tipo de cuenta:</strong>
+                            <span>Administrador</span>
+                        </p>
+                    </div>
+                </article>
+
+                <!-- Formulario para cambiar el nombre de usuario -->
+                <article class="system-card admin-form-container account-form-card">
+
+                    <h3>Cambiar nombre de usuario</h3>
+
+                    <p>
+                        Puedes modificar el nombre que utilizas para iniciar sesión.
+                    </p>
+
+                    <form id="change-username-form">
+
+                        <label for="account-new-username">
+                            Nuevo nombre de usuario
+                        </label>
+
+                        <input
+                            type="text"
+                            id="account-new-username"
+                            minlength="3"
+                            maxlength="50"
+                            autocomplete="username"
+                            placeholder="Ingresa tu nuevo usuario"
+                            required
+                        >
+
+                        <div class="account-form-actions">
+                            <button type="submit">
+                                Guardar nuevo usuario
+                            </button>
+                        </div>
+
+                        <p id="change-username-message" role="status"></p>
+
+                    </form>
+                </article>
+
+                <!-- Formulario para cambiar la contraseña -->
+                <article class="system-card admin-form-container account-form-card">
+
+                    <h3>Cambiar contraseña</h3>
+
+                    <p>
+                        Por seguridad, debes confirmar tu contraseña actual antes
+                        de establecer una nueva.
+                    </p>
+
+                    <form id="change-password-form">
+
+                        <label for="account-current-password">
+                            Contraseña actual
+                        </label>
+
+                        <input
+                            type="password"
+                            id="account-current-password"
+                            maxlength="128"
+                            autocomplete="current-password"
+                            placeholder="Ingresa tu contraseña actual"
+                            required
+                        >
+
+                        <label for="account-new-password">
+                            Nueva contraseña
+                        </label>
+
+                        <input
+                            type="password"
+                            id="account-new-password"
+                            minlength="6"
+                            maxlength="128"
+                            autocomplete="new-password"
+                            placeholder="Mínimo 6 caracteres"
+                            required
+                        >
+
+                        <label for="account-confirm-password">
+                            Confirmar nueva contraseña
+                        </label>
+
+                        <input
+                            type="password"
+                            id="account-confirm-password"
+                            minlength="6"
+                            maxlength="128"
+                            autocomplete="new-password"
+                            placeholder="Repite la nueva contraseña"
+                            required
+                        >
+
+                        <div class="account-form-actions">
+                            <button type="submit">
+                                Actualizar contraseña
+                            </button>
+                        </div>
+
+                        <p id="change-password-message" role="status"></p>
+
+                    </form>
+                </article>
+
             </section>
 
             <footer class="page-footer">

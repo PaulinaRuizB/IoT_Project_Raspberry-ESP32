@@ -13,11 +13,17 @@ from app.database import (
     get_measurements,
     get_latest_measurement,
     get_node_ids,
+    get_all_users,
+    create_farmer_user,
+    update_farmer_user, 
+    set_farmer_user_status,
+    reset_farmer_password,
 )
 
 #conectarse al archivo de autenticación
 from app.auth import router as auth_router
-from app.auth import get_current_user
+from app.auth import get_current_user, require_admin
+from app.security import hash_password
 
 app = FastAPI(title="IoT Server")
 BASE_DIR = Path(__file__).resolve().parent.parent
@@ -37,6 +43,25 @@ class MeasurementInput(BaseModel):
     soil_moisture_pct: float | None = Field(default=None,ge=0,le=100)
     temperature_c: float = Field(ge=-50, le=100)
     humidity_pct: float | None = Field(default=None, ge=0, le=100)
+
+#Modelo para crear usuarios agricultores
+class CreateFarmerInput(BaseModel):
+    username: str = Field(min_length=3, max_length=50)
+    password: str = Field(min_length=6, max_length=128)
+    farm_id: int = Field(gt=0)
+
+# Modelo para actualizar usuarios agricultores
+class UpdateFarmerInput(BaseModel):
+    username: str = Field(min_length=3, max_length=50)
+    farm_id: int = Field(gt=0)
+
+# Modelo para restablecer la contraseña de un agricultor
+class ResetPasswordInput(BaseModel):
+    password: str = Field(min_length=6, max_length=128)
+
+# Modelo para activar o desactivar agricultores
+class UpdateFarmerStatusInput(BaseModel):
+    is_active: bool
 
 # Crear la tabla al iniciar la aplicación
 @app.on_event("startup")
@@ -138,3 +163,161 @@ def list_nodes(
     )
 
     return get_node_ids(farm_id=farm_id)
+
+#creación de usuarios nuevos desde admin
+
+@app.get("/api/admin/users")
+def list_users(
+    admin: dict = Depends(require_admin)
+):
+    """
+    Devuelve todos los usuarios registrados.
+    Solo pueden acceder los administradores.
+    """
+
+    return get_all_users()
+
+@app.put("/api/admin/users/{user_id}")
+def edit_farmer(user_id: int, data: UpdateFarmerInput, admin=Depends(require_admin)):
+    """
+    Actualiza el nombre de usuario y la finca
+    asignada a un agricultor.
+    """
+
+    # Evitar nombres vacíos o con espacios al inicio y al final
+    username = data.username.strip()
+
+    if len(username) < 3:
+        raise HTTPException(
+            status_code=400,
+            detail="El nombre de usuario debe tener al menos 3 caracteres."
+        )
+
+    try:
+        updated_user = update_farmer_user(
+            user_id=user_id,
+            username=username,
+            farm_id=data.farm_id
+        )
+
+        return {
+            "message": "Usuario actualizado correctamente.",
+            "user": updated_user
+        }
+
+    except ValueError as error:
+        raise HTTPException(
+            status_code=400,
+            detail=str(error)
+        )
+
+@app.patch("/api/admin/users/{user_id}/status")
+def change_farmer_status(
+    user_id: int,
+    data: UpdateFarmerStatusInput,
+    admin=Depends(require_admin)
+):
+    """
+    Activa o desactiva una cuenta de agricultor.
+    """
+
+    try:
+        updated_user = set_farmer_user_status(
+            user_id=user_id,
+            is_active=data.is_active
+        )
+
+        return {
+            "message": (
+                "Cuenta activada correctamente."
+                if data.is_active
+                else "Cuenta desactivada correctamente."
+            ),
+            "user": updated_user
+        }
+
+    except ValueError as error:
+        raise HTTPException(
+            status_code=400,
+            detail=str(error)
+        )
+
+
+
+# CREACIÓN DE USUARIOS - ADMINISTRADOR
+
+@app.post("/api/admin/users", status_code=201)
+def create_user(
+    user_data: CreateFarmerInput,
+    admin: dict = Depends(require_admin)
+):
+    """
+    Registra un nuevo agricultor.
+    Solo pueden acceder los administradores.
+    """
+
+    # Generar hash seguro de la contraseña
+    password_hash = hash_password(user_data.password)
+
+    try:
+        new_user = create_farmer_user(
+            username=user_data.username.strip(),
+            password_hash=password_hash,
+            farm_id=user_data.farm_id
+        )
+
+        return {
+            "message": "Usuario agricultor creado correctamente.",
+            "user": new_user
+        }
+
+    except ValueError as error:
+        raise HTTPException(
+            status_code=400,
+            detail=str(error)
+        ) from error
+
+
+# RESTABLECIMIENTO DE CONTRASEÑAS - ADMINISTRADOR
+
+@app.put("/api/admin/users/{user_id}/password")
+def reset_user_password(
+    user_id: int,
+    data: ResetPasswordInput,
+    admin: dict = Depends(require_admin)
+):
+    """
+    Restablece la contraseña de un agricultor.
+
+    Solo pueden realizar esta operación los administradores.
+    La contraseña se almacena mediante Argon2id y se
+    invalidan todas las sesiones anteriores del agricultor.
+    """
+
+    # 1. Evitar contraseñas vacías o compuestas solo por espacios
+    if not data.password.strip():
+        raise HTTPException(
+            status_code=400,
+            detail="La contraseña no puede estar vacía."
+        )
+
+    # 2. Generar un nuevo hash mediante Argon2id
+    password_hash = hash_password(data.password)
+
+    # 3. Actualizar contraseña e invalidar sesiones
+    try:
+        updated_user = reset_farmer_password(
+            user_id=user_id,
+            password_hash=password_hash
+        )
+
+        return {
+            "message": "Contraseña restablecida correctamente. El usuario deberá iniciar sesión nuevamente.",
+            "user": updated_user
+        }
+
+    except ValueError as error:
+        raise HTTPException(
+            status_code=400,
+            detail=str(error)
+        ) from error

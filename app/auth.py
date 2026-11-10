@@ -4,7 +4,8 @@ import hashlib
 
 from datetime import datetime, timedelta, timezone
 
-from fastapi import APIRouter, HTTPException, Request, Response
+from fastapi import APIRouter, HTTPException, Request, Response, Depends
+from pydantic import BaseModel, Field
 
 from app.database import (
     get_user_by_username,
@@ -12,9 +13,12 @@ from app.database import (
     get_session_user,
     delete_session,
     delete_expired_sessions,
+    get_user_credentials,
+    update_admin_username,
+    update_admin_password,
 )
 
-from app.security import verify_password
+from app.security import verify_password, hash_password
 
 
 # Configuración de sesiones
@@ -23,6 +27,18 @@ SESSION_DURATION_HOURS = 12
 
 # Router de autenticación
 router = APIRouter(prefix="/api/auth", tags=["Autenticación"])
+
+# ========================================
+# MODELOS PARA MODIFICAR LA CUENTA ADMIN
+# ========================================
+
+class UpdateMyUsernameInput(BaseModel):
+    username: str = Field(min_length=3, max_length=50)
+
+
+class ChangeMyPasswordInput(BaseModel):
+    current_password: str = Field(min_length=1, max_length=128)
+    new_password: str = Field(min_length=6, max_length=128)
 
 
 def hash_token(token: str) -> str:
@@ -188,3 +204,122 @@ def logout(request: Request, response: Response):
     return {
         "message": "Sesión cerrada correctamente."
     }
+
+# ========================================
+# MODIFICAR NOMBRE DE USUARIO DEL ADMIN
+# ========================================
+
+@router.put("/me/username")
+def update_my_username(
+    data: UpdateMyUsernameInput,
+    admin: dict = Depends(require_admin)
+):
+    """
+    Permite al administrador cambiar su propio nombre de usuario.
+    """
+
+    username = data.username.strip()
+
+    if len(username) < 3:
+        raise HTTPException(
+            status_code=400,
+            detail="El nombre de usuario debe tener al menos 3 caracteres."
+        )
+
+    try:
+        updated_user = update_admin_username(
+            user_id=admin["id"],
+            username=username
+        )
+
+        return {
+            "message": "Nombre de usuario actualizado correctamente.",
+            "user": updated_user
+        }
+
+    except ValueError as error:
+        raise HTTPException(
+            status_code=400,
+            detail=str(error)
+        ) from error
+
+
+# ========================================
+# CAMBIAR CONTRASEÑA DEL ADMIN
+# ========================================
+
+@router.put("/me/password")
+def change_my_password(
+    data: ChangeMyPasswordInput,
+    response: Response,
+    admin: dict = Depends(require_admin)
+):
+    """
+    Permite al administrador cambiar su contraseña.
+    Comprueba la contraseña actual e invalida las sesiones anteriores.
+    """
+
+    # 1. Evitar contraseñas nuevas vacías.
+    if not data.new_password.strip():
+        raise HTTPException(
+            status_code=400,
+            detail="La nueva contraseña no puede estar vacía."
+        )
+
+    # 2. Recuperar el hash de la contraseña actual.
+    credentials = get_user_credentials(admin["id"])
+
+    if credentials is None:
+        raise HTTPException(
+            status_code=404,
+            detail="No se encontró la cuenta administradora."
+        )
+
+    # 3. Verificar la contraseña actual.
+    if not verify_password(
+        data.current_password,
+        credentials["password_hash"]
+    ):
+        raise HTTPException(
+            status_code=400,
+            detail="La contraseña actual es incorrecta."
+        )
+
+    # 4. Evitar establecer exactamente la misma contraseña.
+    if verify_password(
+        data.new_password,
+        credentials["password_hash"]
+    ):
+        raise HTTPException(
+            status_code=400,
+            detail="La nueva contraseña debe ser diferente a la actual."
+        )
+
+    # 5. Generar el hash seguro de la nueva contraseña.
+    new_password_hash = hash_password(data.new_password)
+
+    try:
+        updated_user = update_admin_password(
+            user_id=admin["id"],
+            password_hash=new_password_hash
+        )
+
+        # 6. Eliminar la cookie de sesión del navegador actual.
+        response.delete_cookie(
+            key=SESSION_COOKIE_NAME,
+            path="/",
+            httponly=True,
+            secure=False,
+            samesite="lax"
+        )
+
+        return {
+            "message": "Contraseña actualizada correctamente. Debes iniciar sesión nuevamente.",
+            "user": updated_user
+        }
+
+    except ValueError as error:
+        raise HTTPException(
+            status_code=400,
+            detail=str(error)
+        ) from error

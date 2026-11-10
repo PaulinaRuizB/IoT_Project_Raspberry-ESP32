@@ -380,3 +380,372 @@ def delete_expired_sessions():
         """, (current_time,))
 
         return cursor.rowcount
+
+#para administrar las cuentas desde admin
+
+def get_all_users():
+    """Devuelve todos los usuarios con el nombre de su finca.
+
+    No incluye los hashes de las contraseñas.
+    """
+
+    with get_connection() as connection:
+        rows = connection.execute("""
+            SELECT
+                users.id,
+                users.username,
+                users.role,
+                users.farm_id,
+                farms.name AS farm_name,
+                users.is_active,
+                users.created_at
+            FROM users
+            LEFT JOIN farms
+                ON users.farm_id = farms.id
+            ORDER BY users.id ASC
+        """).fetchall()
+
+        return [
+            {
+                **dict(row),
+                "is_active": bool(row["is_active"])
+            }
+            for row in rows
+        ]
+
+
+def create_farmer_user(username, password_hash, farm_id):
+    """
+    Registra un nuevo agricultor en la base de datos.
+    """
+
+    from datetime import datetime, timezone
+
+    created_at = datetime.now(timezone.utc).isoformat()
+
+    with get_connection() as connection:
+
+        # Comprobar que la finca existe
+        farm = connection.execute(
+            "SELECT id, name FROM farms WHERE id = ?",
+            (farm_id,)
+        ).fetchone()
+
+        if farm is None:
+            raise ValueError("La finca seleccionada no existe.")
+
+        # Comprobar que el usuario no esté registrado
+        existing_user = connection.execute(
+            "SELECT id FROM users WHERE username = ?",
+            (username,)
+        ).fetchone()
+
+        if existing_user is not None:
+            raise ValueError("Ese nombre de usuario ya está registrado.")
+
+        # Guardar el nuevo agricultor
+        cursor = connection.execute(
+            """
+            INSERT INTO users (
+                username,
+                password_hash,
+                role,
+                farm_id,
+                is_active,
+                created_at
+            )
+            VALUES (?, ?, 'farmer', ?, 1, ?)
+            """,
+            (username, password_hash, farm_id, created_at)
+        )
+
+        return {
+            "id": cursor.lastrowid,
+            "username": username,
+            "role": "farmer",
+            "farm_id": farm_id,
+            "farm_name": farm["name"],
+            "is_active": True,
+            "created_at": created_at
+        }
+
+def update_farmer_user(user_id, username, farm_id):
+    """
+    Actualiza el nombre de usuario y la finca asignada
+    a una cuenta de agricultor.
+    """
+
+    with get_connection() as connection:
+
+        # 1. Comprobar que el usuario existe y es agricultor
+        user = connection.execute(
+            """
+            SELECT id, role
+            FROM users
+            WHERE id = ?
+            """,
+            (user_id,)
+        ).fetchone()
+
+        if user is None:
+            raise ValueError("El usuario no existe.")
+
+        if user["role"] != "farmer":
+            raise ValueError(
+                "Solo se pueden editar cuentas de agricultores."
+            )
+
+        # 2. Comprobar que la finca existe
+        farm = connection.execute(
+            "SELECT id, name FROM farms WHERE id = ?",
+            (farm_id,)
+        ).fetchone()
+
+        if farm is None:
+            raise ValueError("La finca seleccionada no existe.")
+
+        # 3. Comprobar que el nombre no esté usado por otro usuario
+        existing_user = connection.execute(
+            """
+            SELECT id
+            FROM users
+            WHERE username = ? AND id != ?
+            """,
+            (username, user_id)
+        ).fetchone()
+
+        if existing_user is not None:
+            raise ValueError(
+                "Ese nombre de usuario ya está registrado."
+            )
+
+        # 4. Actualizar los datos
+        connection.execute(
+            """
+            UPDATE users
+            SET username = ?, farm_id = ?
+            WHERE id = ?
+            """,
+            (username, farm_id, user_id)
+        )
+
+        return {
+            "id": user_id,
+            "username": username,
+            "role": "farmer",
+            "farm_id": farm_id,
+            "farm_name": farm["name"]
+        }
+
+def set_farmer_user_status(user_id, is_active):
+    """
+    Activa o desactiva una cuenta de agricultor.
+
+    Cuando se desactiva, elimina sus sesiones activas
+    para impedir que siga utilizando una sesión anterior.
+    """
+
+    with get_connection() as connection:
+
+        # 1. Comprobar que el usuario existe
+        user = connection.execute(
+            """
+            SELECT id, role
+            FROM users
+            WHERE id = ?
+            """,
+            (user_id,)
+        ).fetchone()
+
+        if user is None:
+            raise ValueError("El usuario no existe.")
+
+        # 2. Evitar modificar cuentas administradoras
+        if user["role"] != "farmer":
+            raise ValueError(
+                "Solo se pueden modificar cuentas de agricultores."
+            )
+
+        # 3. Actualizar el estado
+        connection.execute(
+            """
+            UPDATE users
+            SET is_active = ?
+            WHERE id = ?
+            """,
+            (int(is_active), user_id)
+        )
+
+        # 4. Si se desactiva, eliminar sus sesiones
+        if not is_active:
+            connection.execute(
+                """
+                DELETE FROM sessions
+                WHERE user_id = ?
+                """,
+                (user_id,)
+            )
+
+        return {
+            "id": user_id,
+            "is_active": bool(is_active)
+        }
+
+
+def reset_farmer_password(user_id: int, password_hash: str):
+    """
+    Actualiza la contraseña de un agricultor e invalida
+    todas sus sesiones anteriores.
+
+    Ambas operaciones se realizan dentro de una
+    misma transacción.
+    """
+
+    with get_connection() as connection:
+
+        # 1. Comprobar que el usuario existe
+        user = connection.execute(
+            """
+            SELECT id, username, role
+            FROM users
+            WHERE id = ?
+            """,
+            (user_id,)
+        ).fetchone()
+
+        if user is None:
+            raise ValueError("El usuario no existe.")
+
+        # 2. Evitar modificar cuentas administradoras
+        if user["role"] != "farmer":
+            raise ValueError(
+                "Solo se pueden restablecer contraseñas "
+                "de agricultores."
+            )
+
+        # 3. Actualizar el hash de la contraseña
+        connection.execute(
+            """
+            UPDATE users
+            SET password_hash = ?
+            WHERE id = ?
+            """,
+            (password_hash, user_id)
+        )
+
+        # 4. Invalidar todas las sesiones anteriores
+        connection.execute(
+            """
+            DELETE FROM sessions
+            WHERE user_id = ?
+            """,
+            (user_id,)
+        )
+
+        return {
+            "id": user["id"],
+            "username": user["username"],
+            "role": user["role"]
+        }
+#---------------------------------------------------------
+# Para cambiar el usuario y la contraseña del administrador
+
+def get_user_credentials(user_id: int):
+    """
+    Obtiene los datos necesarios para verificar las credenciales
+    de un usuario. Incluye el hash, nunca la contraseña original.
+    """
+
+    with get_connection() as connection:
+        row = connection.execute("""
+            SELECT id, username, role, password_hash
+            FROM users
+            WHERE id = ?
+        """, (user_id,)).fetchone()
+
+        return dict(row) if row else None
+
+
+def update_admin_username(user_id: int, username: str):
+    """
+    Actualiza el nombre de usuario de una cuenta administradora.
+    """
+
+    with get_connection() as connection:
+
+        # 1. Comprobar que el usuario existe y es administrador.
+        user = connection.execute("""
+            SELECT id, role
+            FROM users
+            WHERE id = ?
+        """, (user_id,)).fetchone()
+
+        if user is None:
+            raise ValueError("La cuenta no existe.")
+
+        if user["role"] != "admin":
+            raise ValueError("Esta operación solo está disponible para administradores.")
+
+        # 2. Comprobar que el nuevo nombre no esté ocupado.
+        existing_user = connection.execute("""
+            SELECT id
+            FROM users
+            WHERE username = ? AND id != ?
+        """, (username, user_id)).fetchone()
+
+        if existing_user is not None:
+            raise ValueError("Ese nombre de usuario ya está registrado.")
+
+        # 3. Actualizar el nombre.
+        connection.execute("""
+            UPDATE users
+            SET username = ?
+            WHERE id = ?
+        """, (username, user_id))
+
+        return {
+            "id": user_id,
+            "username": username,
+            "role": "admin"
+        }
+
+
+def update_admin_password(user_id: int, password_hash: str):
+    """
+    Actualiza la contraseña de un administrador e invalida
+    todas sus sesiones anteriores.
+    """
+
+    with get_connection() as connection:
+
+        # 1. Comprobar que la cuenta existe y es administradora.
+        user = connection.execute("""
+            SELECT id, username, role
+            FROM users
+            WHERE id = ?
+        """, (user_id,)).fetchone()
+
+        if user is None:
+            raise ValueError("La cuenta no existe.")
+
+        if user["role"] != "admin":
+            raise ValueError("Esta operación solo está disponible para administradores.")
+
+        # 2. Guardar el nuevo hash de contraseña.
+        connection.execute("""
+            UPDATE users
+            SET password_hash = ?
+            WHERE id = ?
+        """, (password_hash, user_id))
+
+        # 3. Eliminar todas las sesiones anteriores.
+        connection.execute("""
+            DELETE FROM sessions
+            WHERE user_id = ?
+        """, (user_id,))
+
+        return {
+            "id": user["id"],
+            "username": user["username"],
+            "role": "admin"
+        }
