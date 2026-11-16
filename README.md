@@ -198,14 +198,16 @@ Se hizo la primera prueba de enviar un dato al servidor (raspberry) por medio de
 
 Se implementó una interfaz de inición de sesión con usuario y contraseña, en donde al ingresar como administrador se muestran todos los nodos (fincas) y al ingresar como agricultor solo se muestra una. 
 
+### Prueba 012 Implementación de un nodo completo y recomendaciones
+
+Se agregaron los sensores de temperatura (BMP280), humedad ambiental (dht11) y humedad del suelo (sonda yl100) junto con las recomendaciones al agricultor según las variables tomadas. 
+
 ## 11. Limitaciones actuales
 
 - No se ha implementado MQTT.
 - El mecanismo de comunicación de campo entre nodos y Raspberry Pi sigue pendiente de selección y validación.
-- No se han implementado recomendaciones agrícolas.
 - No se ha incorporado análisis de imágenes.
 - No se han realizado pruebas completas de campo sin Internet.
-- No se ha configurado un servicio de producción con inicio automático, supervisión y reinicio del servidor.
 
 El servidor actual es una base funcional para continuar el desarrollo, pero todavía no es un sistema completo listo para desplegar en una explotación agrícola.
 
