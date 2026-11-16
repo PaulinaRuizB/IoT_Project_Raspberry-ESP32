@@ -1,5 +1,5 @@
 
-from datetime import datetime, timezone
+from datetime import datetime, timezone, timedelta
 
 from fastapi import FastAPI, HTTPException, Query, Depends
 from pydantic import BaseModel, Field
@@ -24,6 +24,7 @@ from app.database import (
 from app.auth import router as auth_router
 from app.auth import get_current_user, require_admin
 from app.security import hash_password
+from app.recommendations import evaluate_measurement
 
 app = FastAPI(title="IoT Server")
 BASE_DIR = Path(__file__).resolve().parent.parent
@@ -321,3 +322,146 @@ def reset_user_password(
             status_code=400,
             detail=str(error)
         ) from error
+
+
+# ============================================
+# RECOMENDACIONES AGRICOLAS
+# ============================================
+
+# Tiempo maximo permitido desde la ultima
+# medicion para considerarla reciente.
+MAX_MEASUREMENT_AGE = timedelta(minutes=10)
+
+
+@app.get("/api/recommendations")
+def list_recommendations(
+    node_id: str | None = Query(
+        default=None,
+        min_length=1,
+        max_length=50
+    ),
+    current_user: dict = Depends(get_current_user)
+):
+    """
+    Evalua las mediciones recientes de los
+    nodos que el usuario puede consultar.
+
+    Admin: todos los nodos registrados.
+    Agricultor: nodos de su finca.
+    """
+
+    # 1. Determinar los permisos del usuario.
+    farm_id = (
+        current_user["farm_id"]
+        if current_user["role"] == "farmer"
+        else None
+    )
+
+    # 2. Obtener nodos autorizados.
+    allowed_nodes = get_node_ids(
+        farm_id=farm_id
+    )
+
+    # 3. Comprobar que el nodo solicitado
+    # pertenece a los nodos autorizados.
+    if node_id is not None:
+
+        if node_id not in allowed_nodes:
+            raise HTTPException(
+                status_code=404,
+                detail="Nodo no encontrado."
+            )
+
+        selected_nodes = [node_id]
+
+    else:
+        selected_nodes = allowed_nodes
+
+    results = []
+    now = datetime.now(timezone.utc)
+
+    # 4. Evaluar cada nodo.
+    for current_node in selected_nodes:
+
+        measurement = get_latest_measurement(
+            node_id=current_node,
+            farm_id=farm_id
+        )
+
+        # Nodo sin mediciones.
+        if measurement is None:
+
+            results.append({
+                "node_id": current_node,
+                "status": "no_data",
+                "measurement_id": None,
+                "timestamp": None,
+                "recommendations": []
+            })
+
+            continue
+
+        # 5. Verificar la fecha de la medicion.
+        try:
+            timestamp = datetime.fromisoformat(
+                measurement["timestamp"].replace(
+                    "Z", "+00:00"
+                )
+            )
+
+            if timestamp.tzinfo is None:
+                raise ValueError(
+                    "Timestamp sin zona horaria"
+                )
+
+            age = now - timestamp
+
+        except (ValueError, TypeError, AttributeError):
+
+            results.append({
+                "node_id": current_node,
+                "status": "invalid_timestamp",
+                "measurement_id": measurement["id"],
+                "timestamp": measurement["timestamp"],
+                "recommendations": []
+            })
+
+            continue
+
+        # No generar recomendaciones sobre
+        # datos antiguos o fechas futuras.
+        if age < timedelta(0) or \
+           age > MAX_MEASUREMENT_AGE:
+
+            results.append({
+                "node_id": current_node,
+                "status": "stale",
+                "measurement_id": measurement["id"],
+                "timestamp": measurement["timestamp"],
+                "recommendations": []
+            })
+
+            continue
+
+        # 6. Evaluar las reglas agricolas.
+        recommendations = evaluate_measurement(
+            measurement
+        )
+
+        results.append({
+            "node_id": current_node,
+            "status": "evaluated",
+            "measurement_id": measurement["id"],
+            "timestamp": measurement["timestamp"],
+            "recommendations": recommendations
+        })
+
+    return {
+        "generated_at": now.isoformat(),
+        "total_nodes": len(results),
+        "total_recommendations": sum(
+            len(item["recommendations"])
+            for item in results
+        ),
+        "nodes": results
+    }

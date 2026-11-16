@@ -225,11 +225,7 @@ El servidor actual es una base funcional para continuar el desarrollo, pero toda
 12. Implementar alertas locales.
 13. Validar el funcionamiento sin Internet.
 14. Evaluar sincronización cuando exista conectividad.
-15. Realizar pruebas con usuarios y documentar los resultados.
-
-**Última actualización:** implementación inicial del dashboard, un nodo con sensor BMP280 funcionando e inicios de sesión agregados con cuenta de admin y cuenta de agricultor. 
-
-**Estado general:** servidor y API de mediciones funcionando con datos de prueba; integración con sensores físicos BMP280 lista con ESP32C6 funcionando con red loca. Interfaz de dashboard sencilla con datos enviados en tiempo real. Implementación de autenticación con admin y agricultor. 
+15. Realizar pruebas con usuarios y documentar los resultados. 
 
 # Estado actual del desarrollo
 
@@ -243,6 +239,6 @@ Hasta esta etapa se cuenta con:
 - Gestión de sesiones mediante cookies.
 - Roles de administrador y agricultor.
 - Asociación de usuarios con fincas.
-- Filtrado de nodos y mediciones según los permisos del usuario.
 - Pruebas de inicio de sesión, cierre de sesión y separación de datos.
 - Inicios de sesión con cuentas de administrador y agricultor. El primero puede agregar, editar, desactivar o cambiar información de las demas cuentas. 
+- Un nodo completo funcionando con temperatura, humedad ambiental y humedad del suelo junto con recomendaciones. 

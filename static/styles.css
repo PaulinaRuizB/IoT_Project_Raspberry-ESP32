@@ -1660,3 +1660,50 @@ input {
         margin-bottom: 28px;
     }
 }
+
+
+/* ========================================
+   RECOMENDACIONES AGRICOLAS
+======================================== */
+
+.recommendation-item {
+    padding: 14px 0;
+    border-bottom: 1px solid #e7ece6;
+}
+
+.recommendation-item:last-child {
+    border-bottom: none;
+}
+
+.recommendation-item-title {
+    display: block;
+    color: #214d38;
+    font-size: 15px;
+    font-weight: 600;
+    margin-bottom: 6px;
+}
+
+.recommendation-item p {
+    margin: 0 0 8px;
+    font-size: 14px;
+    line-height: 1.6;
+    color: #24352b;
+}
+
+.recommendation-item-details {
+    display: block;
+    color: #7b887e;
+    font-size: 12px;
+}
+
+.recommendation-data-warning {
+    margin: 12px 0 0;
+    padding: 10px 12px;
+    border-left: 3px solid #d9a441;
+    border-radius: 4px;
+    background-color: #fff8eb;
+    color: #70521b;
+    font-size: 13px;
+    line-height: 1.5;
+}
+

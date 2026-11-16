@@ -389,13 +389,6 @@ function showMeasurement(data) {
     elements.soilUpdated.textContent =
         `Registrada: ${measurementDate.toLocaleString("es-CO")}`;
 
-    elements.recommendationTitle.textContent =
-        "Última medición recibida";
-
-    elements.recommendationText.textContent =
-        "Los datos de este nodo se han cargado correctamente. " +
-        "Las recomendaciones de riego se implementarán más adelante " +
-        "con reglas apropiadas para cada cultivo.";
 }
 
 // Consultamos la última medición de un nodo.
@@ -566,13 +559,6 @@ async function loadAllNodes() {
             elements.allNodesContainer.appendChild(card);
         });
 
-        elements.recommendationTitle.textContent =
-            "Resumen de los nodos";
-
-        elements.recommendationText.textContent =
-            "Aquí puedes comparar las últimas mediciones registradas " +
-            "por cada nodo del cultivo.";
-
     } catch (error) {
         if (!isAuthenticated) return;
 
@@ -588,21 +574,279 @@ async function loadAllNodes() {
 // 10. ACTUALIZACIÓN DEL DASHBOARD
 // ========================================
 
+// Recomendaciones: 
+
+/* ========================================
+   RECOMENDACIONES AGRICOLAS
+======================================== */
+
+// Evita mostrar respuestas antiguas
+// cuando el usuario cambia de nodo.
+let recommendationsRequestId = 0;
+
+async function loadRecommendations(nodeId) {
+
+    const requestId = ++recommendationsRequestId;
+
+    if (!elements.recommendationTitle ||
+        !elements.recommendationText) {
+        return;
+    }
+
+    let url = "/api/recommendations";
+
+    // Si se selecciona un nodo, consultar
+    // solamente sus recomendaciones.
+    // Si está vacío, consultar todos.
+    if (nodeId) {
+        url += `?node_id=${encodeURIComponent(nodeId)}`;
+    }
+
+    try {
+
+        const response = await fetch(url);
+
+        if (!response.ok) {
+            throw new Error(
+                "No se pudieron consultar las recomendaciones."
+            );
+        }
+
+        const data = await response.json();
+
+        // Ignorar respuestas que ya no
+        // corresponden a la selección actual.
+        if (
+            requestId !== recommendationsRequestId ||
+            nodeId !== elements.nodeSelector.value
+        ) {
+            return;
+        }
+
+        const nodes = data.nodes || [];
+
+        // Limpiar contenido anterior.
+        elements.recommendationText.replaceChildren();
+
+        // ==================================
+        // 1. SIN NODOS REGISTRADOS
+        // ==================================
+
+        if (nodes.length === 0) {
+
+            elements.recommendationTitle.textContent =
+                "Sin nodos disponibles";
+
+            elements.recommendationText.textContent =
+                "Todavía no hay nodos registrados " +
+                "para consultar recomendaciones.";
+
+            return;
+        }
+
+        // ==================================
+        // 2. REUNIR LAS RECOMENDACIONES
+        // ==================================
+
+        const recommendations = [];
+
+        let staleCount = 0;
+        let noDataCount = 0;
+        let invalidCount = 0;
+
+        nodes.forEach((node) => {
+
+            if (node.status === "stale") {
+                staleCount++;
+                return;
+            }
+
+            if (node.status === "no_data") {
+                noDataCount++;
+                return;
+            }
+
+            if (node.status === "invalid_timestamp") {
+                invalidCount++;
+                return;
+            }
+
+            if (node.status === "evaluated") {
+
+                (node.recommendations || []).forEach(
+                    (recommendation) => {
+
+                        recommendations.push({
+                            ...recommendation,
+                            node_id: node.node_id
+                        });
+
+                    }
+                );
+            }
+        });
+
+        // ==================================
+        // 3. MOSTRAR RECOMENDACIONES
+        // ==================================
+
+        if (recommendations.length > 0) {
+
+            elements.recommendationTitle.textContent =
+                recommendations.length === 1
+                    ? "1 recomendación agrícola"
+                    : `${recommendations.length} recomendaciones agrícolas`;
+
+            recommendations.forEach((recommendation) => {
+
+                const item = document.createElement("div");
+                item.className = "recommendation-item";
+
+                const title = document.createElement("strong");
+                title.className = "recommendation-item-title";
+                title.textContent = recommendation.title;
+
+                const message = document.createElement("p");
+                message.textContent = recommendation.message;
+
+                const details = document.createElement("small");
+                details.className = "recommendation-item-details";
+
+                const value = Number(recommendation.value);
+                const formattedValue =
+                    Number.isFinite(value)
+                        ? value.toFixed(1)
+                        : "--";
+
+                details.textContent =
+                    `Nodo: ${recommendation.node_id} | ` +
+                    `Valor: ${formattedValue}` +
+                    (recommendation.variable === "temperature_c"
+                        ? " °C"
+                        : " %");
+
+                item.appendChild(title);
+                item.appendChild(message);
+                item.appendChild(details);
+
+                elements.recommendationText.appendChild(item);
+
+            });
+
+        } else {
+
+            elements.recommendationTitle.textContent =
+                "Sin recomendaciones activas";
+
+            const message = document.createElement("p");
+            message.textContent =
+                "Las últimas mediciones evaluadas " +
+                "no activaron ninguna regla agrícola.";
+
+            elements.recommendationText.appendChild(message);
+        }
+
+        // ==================================
+        // 4. ADVERTENCIAS DE DATOS
+        // ==================================
+
+        const warnings = [];
+
+        if (staleCount > 0) {
+            warnings.push(
+                `${staleCount} nodo(s) con datos desactualizados.`
+            );
+        }
+
+        if (noDataCount > 0) {
+            warnings.push(
+                `${noDataCount} nodo(s) sin mediciones.`
+            );
+        }
+
+        if (invalidCount > 0) {
+            warnings.push(
+                `${invalidCount} nodo(s) con fecha inválida.`
+            );
+        }
+
+        if (warnings.length > 0) {
+
+            // Si ningún nodo fue evaluado,
+            // no afirmar que todo está normal.
+            if (recommendations.length === 0) {
+                elements.recommendationTitle.textContent =
+                    "Información de sensores pendiente";
+
+                elements.recommendationText.replaceChildren();
+            }
+
+            const warning = document.createElement("p");
+            warning.className = "recommendation-data-warning";
+            warning.textContent = warnings.join(" ");
+
+            elements.recommendationText.appendChild(warning);
+        }
+
+    } catch (error) {
+
+        // No modificar la pantalla si ya
+        // existe una solicitud más reciente.
+        if (
+            requestId !== recommendationsRequestId ||
+            nodeId !== elements.nodeSelector.value
+        ) {
+            return;
+        }
+
+        elements.recommendationTitle.textContent =
+            "Recomendaciones no disponibles";
+
+        elements.recommendationText.textContent =
+            "No fue posible consultar las recomendaciones. " +
+            "Verifica la conexión con el servidor.";
+    }
+}
+
+
+
 async function refreshDashboard() {
-    if (!isAuthenticated) return;
 
     await checkServerStatus();
 
-    if (!isAuthenticated) return;
+    if (!elements.nodeSelector) {
+        return;
+    }
 
     const selectedNode = elements.nodeSelector.value;
 
+    // ==================================
+    // 1. ACTUALIZAR MEDICIONES
+    // ==================================
+
     if (selectedNode === "") {
+
         await loadAllNodes();
+
     } else {
+
         await loadSelectedNode(selectedNode);
     }
+
+    // Si el usuario cambió la selección
+    // mientras se cargaban las mediciones,
+    // no consultar la selección anterior.
+    if (selectedNode !== elements.nodeSelector.value) {
+        return;
+    }
+
+    // ==================================
+    // 2. ACTUALIZAR RECOMENDACIONES
+    // ==================================
+
+    await loadRecommendations(selectedNode);
 }
+
 
 // Inicializamos las funciones del dashboard
 // únicamente después de confirmar la autenticación.
