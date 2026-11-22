@@ -4,6 +4,11 @@
   "password": "IWA123456789"
 }
 
+{
+  "decision": "rejected",
+  "reason": "El suelo fue regado recientemente."
+}
+
 ### Contraseñas: 
 
 user: Administrador
@@ -64,6 +69,10 @@ ORDER BY farms.id;
 
 ### Para compilar:
 python -m py_compile app/main.py app/recommendations.py
+
+### Para reiniciar el servicio: 
+sudo systemctl restart iot-server.service
+sudo systemctl status iot-server.service --no-pager
 
 
 ## NOTA PARA MI: 

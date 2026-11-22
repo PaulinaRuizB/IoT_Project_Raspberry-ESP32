@@ -192,26 +192,191 @@
                 </article>
             </section>
 
-            <section class="section" id="sistema">
-                <div class="section-heading">
-                    <div>
-                        <h2>Sistema</h2>
-                        <p>Estado de la plataforma de monitoreo.</p>
-                    </div>
+
+            <!-- ======================================
+                HISTORIAL DE RECOMENDACIONES
+            ======================================= -->
+
+            
+<section class="system-card history-card"
+         id="recommendations-history">
+
+    <!-- Contenedor desplegable del historial -->
+
+    <details id="history-panel"
+             class="history-panel">
+
+            <summary class="history-panel-toggle">
+
+                <div class="history-panel-icon">
+                    📋
                 </div>
 
-                <article class="system-card">
+                <div class="history-panel-text">
+
+                    <span class="history-panel-title">
+                        Ver historial de recomendaciones
+                    </span>
+
+                    <small>
+                        Consulta las recomendaciones y
+                        decisiones anteriores.
+                    </small>
+
+                </div>
+
+                <span class="history-panel-arrow"
+                    aria-hidden="true">
+                </span>
+
+            </summary>
+
+            <div class="history-panel-content">
+
+            <div class="history-header">
+
                     <div>
-                        <span class="status-dot"></span>
-                        <strong>Servidor Raspberry Pi</strong>
+                        <h2>Historial de recomendaciones</h2>
+
+                        <p class="history-description">
+                            Consulta las recomendaciones anteriores
+                            y las decisiones registradas.
+                        </p>
                     </div>
-                    <p id="system-message">
-                        Comprobando conexión con el servidor...
-                    </p>
-                </article>
-            </section>
+
+                    <button
+                        type="button"
+                        id="history-refresh"
+                        class="history-refresh-button">
+                        Actualizar
+                    </button>
+
+                </div>
+
+                <!-- Estadisticas -->
+
+                <div class="history-stats">
+
+                    <div class="history-stat">
+                        <span>Total</span>
+                        <strong id="history-total">--</strong>
+                    </div>
+
+                    <div class="history-stat history-accepted">
+                        <span>Aceptadas</span>
+                        <strong id="history-accepted">--</strong>
+                    </div>
+
+                    <div class="history-stat history-rejected">
+                        <span>Rechazadas</span>
+                        <strong id="history-rejected">--</strong>
+                    </div>
+
+                    <div class="history-stat history-pending">
+                        <span>Sin decisión</span>
+                        <strong id="history-pending">--</strong>
+                    </div>
+
+                </div>
+
+                <p id="history-acceptance-rate"
+                class="history-rate">
+                    Tasa de aceptación: --
+                </p>
+
+                <!-- Filtros -->
+
+                <div class="history-filters">
+
+                    <div class="history-filter">
+                        <label for="history-farm-filter">
+                            Finca
+                        </label>
+
+                        <select id="history-farm-filter">
+                            <option value="">
+                                Todas las fincas disponibles
+                            </option>
+                        </select>
+                    </div>
+
+                    <div class="history-filter">
+                        <label for="history-decision-filter">
+                            Decisión
+                        </label>
+
+                        <select id="history-decision-filter">
+
+                            <option value="all">Todas</option>
+
+                            <option value="accepted">
+                                Aceptadas
+                            </option>
+
+                            <option value="rejected">
+                                Rechazadas
+                            </option>
+
+                            <option value="pending">
+                                Sin decisión
+                            </option>
+
+                        </select>
+                    </div>
+
+                </div>
+
+                <!-- Estado de la consulta -->
+
+                <p id="history-message"
+                class="history-description">
+                    Cargando historial...
+                </p>
+
+                <!-- Recomendaciones almacenadas -->
+
+                <div id="history-list"
+                 class="history-list">
+                </div>
+
+            </div> <!-- history-panel-content -->
+
+        </details> <!-- history-panel -->
+
+    </section>
+
             <!-- Gestión de usuarios: solo administradores -->
             <section class="section admin-only" id="usuarios" hidden>
+                
+                <details id="users-panel"
+                        class="history-panel admin-panel">
+
+                    <summary class="history-panel-toggle">
+
+                        <span class="history-panel-icon">
+                            👥
+                        </span>
+
+                        <span class="history-panel-text">
+
+                            <span class="history-panel-title">
+                                Ver gestión de usuarios
+                            </span>
+
+                            <small>
+                                Administra agricultores, fincas
+                                y cuentas de usuario.
+                            </small>
+
+                        </span>
+
+                        <span class="history-panel-arrow"
+                            aria-hidden="true">
+                        </span>
+
+                    </summary>
+
+                    <div class="history-panel-content">
 
                 <div class="section-heading">
                 
@@ -399,15 +564,50 @@
                             </button>
                         </div>
 
-                        <p id="reset-password-message"></p>
+                            <p id="reset-password-message"></p>
 
                     </form>
                 </div>
 
-            </section>
+                </div> <!-- history-panel-content -->
+
+            </details> <!-- users-panel -->
+
+        </section>
 
             <!-- Configuración de la cuenta del administrador -->
             <section class="section admin-only" id="mi-cuenta" hidden>
+
+
+                <details id="account-panel"
+                        class="history-panel admin-panel">
+
+                    <summary class="history-panel-toggle">
+
+                        <span class="history-panel-icon">
+                            ⚙️
+                        </span>
+
+                        <span class="history-panel-text">
+
+                            <span class="history-panel-title">
+                                Ver mi cuenta
+                            </span>
+
+                            <small>
+                                Configura tu nombre de usuario
+                                y contraseña.
+                            </small>
+
+                        </span>
+
+                        <span class="history-panel-arrow"
+                            aria-hidden="true">
+                        </span>
+
+                    </summary>
+
+                <div class="history-panel-content">
 
                 <div class="section-heading">
                     <div>
@@ -536,6 +736,29 @@
                     </form>
                 </article>
 
+                    </div> <!-- history-panel-content -->
+
+                </details> <!-- account-panel -->
+
+            </section>
+
+             <section class="section" id="sistema">
+                <div class="section-heading">
+                    <div>
+                        <h2>Sistema</h2>
+                        <p>Estado de la plataforma de monitoreo.</p>
+                    </div>
+                </div>
+
+                <article class="system-card">
+                    <div>
+                        <span class="status-dot"></span>
+                        <strong>Servidor Raspberry Pi</strong>
+                    </div>
+                    <p id="system-message">
+                        Comprobando conexión con el servidor...
+                    </p>
+                </article>
             </section>
 
             <footer class="page-footer">

@@ -164,15 +164,13 @@ def initialize_database():
             """, (node_id, farm["id"], current_time))
 
 
-def save_measurement(
-    node_id,
-    timestamp,
-    soil_moisture_pct,
-    temperature_c,
-    humidity_pct
-):
+def save_measurement(node_id,timestamp,soil_moisture_pct,temperature_c,humidity_pct):
     """Guarda una medición enviada por un nodo IoT."""
 
+    from app.recommendations_history import (
+        sync_recommendations
+    )
+    
     with get_connection() as connection:
 
         cursor = connection.execute("""
@@ -192,7 +190,24 @@ def save_measurement(
             humidity_pct
         ))
 
-        return cursor.lastrowid
+        measurement_id = cursor.lastrowid
+
+        measurement = {
+            "node_id": node_id,
+            "timestamp": timestamp,
+            "soil_moisture_pct": soil_moisture_pct,
+            "temperature_c": temperature_c,
+            "humidity_pct": humidity_pct
+        }
+
+        # Evaluar y guardar recomendaciones.
+        sync_recommendations(
+            connection,
+            measurement_id,
+            measurement
+        )
+
+        return measurement_id
 
 
 

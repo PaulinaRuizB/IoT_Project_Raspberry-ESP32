@@ -1707,3 +1707,1143 @@ input {
     line-height: 1.5;
 }
 
+
+/* ========================================
+   HISTORIAL DE RECOMENDACIONES
+======================================== */
+
+.history-card {
+    margin-top: 24px;
+    min-width: 0;
+}
+
+.history-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 16px;
+    flex-wrap: wrap;
+    margin-bottom: 20px;
+}
+
+.history-header h2 {
+    color: var(--green-dark);
+    margin: 0 0 6px;
+}
+
+.history-description {
+    color: var(--text-muted);
+    font-size: 13px;
+    line-height: 1.5;
+}
+
+.history-refresh-button {
+    background: var(--green-main);
+    color: white;
+    border: none;
+    border-radius: 8px;
+    padding: 10px 18px;
+    font-weight: 600;
+    cursor: pointer;
+}
+
+.history-refresh-button:hover {
+    background: var(--green-dark);
+}
+
+
+/* Estadisticas */
+
+.history-stats {
+    display: grid;
+    grid-template-columns: repeat(4, minmax(0, 1fr));
+    gap: 14px;
+    margin-bottom: 16px;
+}
+
+.history-stat {
+    padding: 18px;
+    border-radius: 12px;
+    background: var(--green-soft);
+}
+
+.history-stat span {
+    display: block;
+    font-size: 13px;
+    color: var(--text-muted);
+    margin-bottom: 8px;
+}
+
+.history-stat strong {
+    display: block;
+    font-size: 28px;
+    color: var(--green-dark);
+}
+
+.history-accepted {
+    background: #e8f3e9;
+}
+
+.history-rejected {
+    background: #faeae8;
+}
+
+.history-rejected strong {
+    color: #a74b43;
+}
+
+.history-pending {
+    background: #fff0e4;
+}
+
+.history-pending strong {
+    color: #996b32;
+}
+
+.history-rate {
+    color: var(--green-main);
+    font-size: 14px;
+    font-weight: 600;
+    margin-bottom: 20px;
+}
+
+
+/* Filtros */
+
+.history-filters {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 14px;
+    margin-bottom: 18px;
+}
+
+.history-filter {
+    flex: 1;
+    min-width: 160px;
+}
+
+.history-filter label {
+    display: block;
+    font-size: 13px;
+    font-weight: 600;
+    color: var(--green-dark);
+    margin-bottom: 6px;
+}
+
+.history-filter select {
+    width: 100%;
+    padding: 10px 12px;
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    color: var(--text-main);
+    background: var(--surface);
+}
+
+
+/* Tarjetas de historial */
+
+.history-list {
+    display: grid;
+    gap: 12px;
+    margin-top: 16px;
+}
+
+.history-item {
+    padding: 18px;
+    border: 1px solid var(--border);
+    border-radius: 12px;
+    background: var(--surface);
+    overflow-wrap: anywhere;
+}
+
+.history-item-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: flex-start;
+    flex-wrap: wrap;
+    gap: 10px;
+    margin-bottom: 8px;
+}
+
+.history-item-header h3 {
+    color: var(--green-dark);
+    font-size: 16px;
+    margin: 0;
+}
+
+.history-badge {
+    padding: 5px 10px;
+    border-radius: 6px;
+    font-weight: 600;
+    font-size: 12px;
+}
+
+.history-badge-accepted {
+    background: #e8f3e9;
+    color: #347653;
+}
+
+.history-badge-rejected {
+    background: #faeae8;
+    color: #a74b43;
+}
+
+.history-badge-pending {
+    background: #fff0e4;
+    color: #996b32;
+}
+
+.history-item-location {
+    color: var(--text-muted);
+    font-size: 12px;
+    margin-bottom: 12px;
+}
+
+.history-item-message {
+    color: var(--text-main);
+    font-size: 14px;
+    line-height: 1.6;
+    margin-bottom: 12px;
+}
+
+.history-item-detail {
+    font-size: 12px;
+    color: var(--text-muted);
+    margin: 5px 0;
+}
+
+
+/* Motivo del rechazo */
+
+.history-rejection-reason {
+    background: #fcf3f1;
+    border-left: 3px solid #dcb4af;
+    border-radius: 6px;
+    padding: 12px;
+    margin-top: 14px;
+}
+
+.history-rejection-reason strong {
+    font-size: 13px;
+    color: #a74b43;
+}
+
+.history-rejection-reason p {
+    font-size: 13px;
+    line-height: 1.6;
+    margin: 6px 0 0;
+    white-space: pre-wrap;
+}
+
+
+/* Adaptacion a celulares */
+
+@media (max-width: 768px) {
+
+    .history-stats {
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+    }
+
+    .history-filters {
+        flex-direction: column;
+    }
+
+    .history-filter {
+        min-width: 0;
+    }
+
+    .history-item {
+        padding: 14px;
+    }
+}
+
+@media (max-width: 480px) {
+
+    .history-refresh-button {
+        width: 100%;
+    }
+
+    .history-stat {
+        padding: 12px;
+    }
+
+    .history-stat strong {
+        font-size: 24px;
+    }
+}
+
+.recommendation-decision {
+    margin-top: 12px !important;
+    padding: 8px 12px;
+    border-radius: 6px;
+    font-size: 13px;
+    font-weight: 600;
+}
+
+.decision-accepted {
+    background-color: #e8f3e9;
+    color: #347653 !important;
+}
+
+.decision-rejected {
+    background-color: #faeae8;
+    color: #a74b43 !important;
+}
+
+.recommendation-reason {
+    font-size: 13px !important;
+    overflow-wrap: anywhere;
+    color: var(--text-muted) !important;
+    margin-top: 8px !important;
+}
+
+
+/* ========================================
+   HISTORIAL - DISTRIBUCIÓN HORIZONTAL
+======================================== */
+
+#history-list.history-list {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr);
+
+    align-items: start;
+    justify-items: stretch;
+
+    gap: 12px;
+
+    width: 100%;
+    min-width: 0;
+
+    margin-top: 18px;
+}
+
+#history-list .history-item {
+    display: block;
+
+    width: 100%;
+    min-width: 0;
+
+    box-sizing: border-box;
+
+    margin: 0;
+    padding: 16px 20px;
+
+    background: var(--surface);
+
+    border: 1px solid var(--border);
+    border-radius: 12px;
+
+    overflow-wrap: anywhere;
+
+    transition:
+        border-color 0.2s ease,
+        box-shadow 0.2s ease;
+}
+
+#history-list .history-item:hover {
+    border-color: #b8d3bd;
+
+    box-shadow:
+        0 3px 12px rgba(33, 77, 56, 0.04);
+}
+
+
+/* ========================================
+   HISTORIAL - ENCABEZADO DE TARJETAS
+======================================== */
+
+#history-list .history-item-header {
+    display: flex;
+
+    align-items: flex-start;
+    justify-content: flex-start;
+
+    flex-wrap: nowrap;
+
+    gap: 14px;
+
+    margin: 0;
+}
+
+.history-item-icon {
+    display: flex;
+
+    align-items: center;
+    justify-content: center;
+
+    width: 46px;
+    height: 46px;
+
+    flex-shrink: 0;
+
+    background: var(--green-light);
+
+    border-radius: 12px;
+
+    font-size: 22px;
+}
+
+.history-item-content {
+    flex: 1;
+    min-width: 0;
+}
+
+#history-list .history-item-header h3 {
+    margin: 0 0 5px;
+
+    color: var(--green-dark);
+
+    font-size: 15px;
+    font-weight: 700;
+
+    line-height: 1.4;
+}
+
+#history-list .history-item-location,
+#history-list .history-item-date {
+    margin: 3px 0;
+    padding: 0;
+
+    color: var(--text-muted);
+
+    font-size: 12px;
+    line-height: 1.5;
+}
+
+#history-list .history-badge {
+    display: inline-flex;
+
+    align-items: center;
+
+    flex-shrink: 0;
+
+    padding: 6px 12px;
+
+    border-radius: 7px;
+
+    font-size: 12px;
+    font-weight: 600;
+
+    white-space: nowrap;
+}
+
+
+/* ========================================
+   HISTORIAL - MOTIVO DEL RECHAZO
+======================================== */
+
+#history-list .history-rejection-reason {
+    margin: 12px 0 0;
+    padding: 9px 12px;
+
+    background: #fcf3f1;
+
+    border-left: 3px solid #dcb4af;
+    border-radius: 6px;
+
+    color: #85534e;
+
+    font-size: 12px;
+    line-height: 1.6;
+
+    overflow-wrap: anywhere;
+}
+
+#history-list .history-rejection-reason strong {
+    display: inline;
+
+    font-size: inherit;
+    color: #a74b43;
+}
+
+#history-list .history-rejection-reason span {
+    white-space: pre-wrap;
+}
+
+
+/* ========================================
+   HISTORIAL - DETALLES DESPLEGABLES
+======================================== */
+
+.history-expandable {
+    width: 100%;
+    margin-top: 10px;
+}
+
+.history-expandable summary {
+    display: flex;
+
+    align-items: center;
+    justify-content: flex-end;
+
+    gap: 8px;
+
+    padding: 5px 0;
+
+    list-style: none;
+
+    color: var(--green-main);
+
+    font-size: 12px;
+    font-weight: 600;
+
+    cursor: pointer;
+}
+
+.history-expandable summary::-webkit-details-marker {
+    display: none;
+}
+
+.history-expandable summary::after {
+    content: "⌄";
+    font-size: 16px;
+}
+
+.history-expandable[open] summary::after {
+    transform: rotate(180deg);
+}
+
+.history-expandable summary:hover {
+    color: var(--green-dark);
+}
+
+.history-expandable summary:focus-visible {
+    outline: 2px solid var(--green-main);
+    outline-offset: 4px;
+}
+
+.history-details-content {
+    margin-top: 10px;
+    padding-top: 14px;
+
+    border-top: 1px solid var(--border);
+}
+
+#history-list .history-item-message {
+    font-size: 13px;
+
+    color: var(--text-main);
+
+    line-height: 1.6;
+
+    margin: 0 0 14px;
+    padding: 0;
+}
+
+.history-details-grid {
+    display: grid;
+
+    grid-template-columns:
+        repeat(3, minmax(0, 1fr));
+
+    gap: 10px;
+}
+
+.history-detail-box {
+    background: var(--green-soft);
+
+    border-radius: 8px;
+
+    padding: 12px;
+
+    min-width: 0;
+}
+
+.history-detail-box span {
+    display: block;
+
+    font-size: 11px;
+
+    color: var(--text-muted);
+
+    margin-bottom: 5px;
+}
+
+.history-detail-box strong {
+    display: block;
+
+    font-size: 13px;
+    font-weight: 600;
+
+    color: var(--green-dark);
+
+    line-height: 1.5;
+
+    overflow-wrap: anywhere;
+}
+
+
+/* ========================================
+   HISTORIAL - ESTADÍSTICAS
+======================================== */
+
+#recommendations-history .history-stats {
+    display: grid;
+
+    grid-template-columns:
+        repeat(4, minmax(0, 1fr));
+
+    align-items: stretch;
+
+    gap: 12px;
+
+    width: 100%;
+}
+
+#recommendations-history .history-stat {
+    display: flex;
+
+    flex-direction: column;
+    justify-content: center;
+
+    min-width: 0;
+
+    box-sizing: border-box;
+
+    padding: 16px;
+
+    border-radius: 12px;
+}
+
+#recommendations-history .history-stat span {
+    font-size: 12px;
+    margin-bottom: 8px;
+}
+
+#recommendations-history .history-stat strong {
+    font-size: 26px;
+}
+
+/* ========================================
+   DECISIONES DEL AGRICULTOR
+======================================== */
+
+.recommendation-actions {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 12px;
+    margin-top: 16px;
+}
+
+.recommendation-actions[hidden] {
+    display: none;
+}
+
+
+/* Estilo general de botones */
+
+.recommendation-accept,
+.recommendation-reject,
+.recommendation-cancel {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 8px;
+
+    flex: 1;
+
+    padding: 12px 20px;
+
+    border: 1px solid transparent;
+    border-radius: 10px;
+
+    font-family: inherit;
+    font-size: 14px;
+    font-weight: 600;
+
+    cursor: pointer;
+
+    transition:
+        background-color 0.2s ease,
+        border-color 0.2s ease;
+}
+
+
+/* Botón aceptar */
+
+.recommendation-accept {
+    background-color: var(--green-main);
+    color: #ffffff;
+    border-color: var(--green-main);
+}
+
+.recommendation-accept:hover:not(:disabled) {
+    background-color: var(--green-dark);
+    border-color: var(--green-dark);
+}
+
+
+/* Botón rechazar */
+
+.recommendation-reject {
+    background-color: #ffffff;
+    color: #a74b43;
+    border-color: #dcb4af;
+}
+
+.recommendation-reject:hover:not(:disabled) {
+    background-color: #faeae8;
+}
+
+
+/* Botón cancelar */
+
+.recommendation-cancel {
+    background-color: var(--surface);
+    color: var(--text-muted);
+    border-color: var(--border);
+}
+
+.recommendation-cancel:hover:not(:disabled) {
+    background-color: var(--green-soft);
+}
+
+
+/* Botones deshabilitados */
+
+.recommendation-actions button:disabled {
+    opacity: 0.5;
+    cursor: not-allowed;
+}
+
+
+/* ========================================
+   FORMULARIO DE DECISIONES
+======================================== */
+
+.recommendation-decision-form {
+    background-color: var(--green-soft);
+    border: 1px solid var(--border);
+    border-radius: 14px;
+
+    padding: 20px;
+    margin-top: 18px;
+
+    width: 100%;
+    box-sizing: border-box;
+}
+
+.recommendation-decision-form h4 {
+    font-size: 16px;
+    font-weight: 600;
+    color: var(--green-dark);
+    margin: 0 0 10px;
+}
+
+.decision-form-description {
+    font-size: 13px !important;
+    line-height: 1.6;
+    color: var(--text-muted) !important;
+    margin: 0 0 14px !important;
+}
+
+
+/* Cajón de texto */
+
+.recommendation-reason-input {
+    display: block;
+
+    width: 100%;
+    min-height: 110px;
+
+    box-sizing: border-box;
+
+    padding: 12px 14px;
+
+    border: 1px solid var(--border);
+    border-radius: 10px;
+
+    background-color: var(--surface);
+
+    font-family: inherit;
+    font-size: 14px;
+    line-height: 1.6;
+
+    color: var(--text-main);
+
+    resize: vertical;
+
+    transition:
+        border-color 0.2s ease,
+        box-shadow 0.2s ease;
+}
+
+.recommendation-reason-input:focus {
+    outline: none;
+
+    border-color: var(--green-main);
+
+    box-shadow:
+        0 0 0 3px rgba(52, 118, 83, 0.10);
+}
+
+.recommendation-reason-input::placeholder {
+    color: var(--text-muted);
+}
+
+
+/* Contador de caracteres */
+
+.recommendation-character-counter {
+    display: block;
+    text-align: right;
+    font-size: 12px;
+    color: var(--text-muted);
+    margin-top: 8px;
+}
+
+
+/* Mensajes de error */
+
+.recommendation-form-error {
+    font-size: 13px !important;
+    color: #a74b43 !important;
+    margin-top: 10px;
+    overflow-wrap: anywhere;
+}
+
+.recommendation-form-error:empty {
+    display: none;
+}
+
+
+/* ========================================
+   ESTADOS DE LAS RECOMENDACIONES
+======================================== */
+
+.recommendation-decision {
+    display: block;
+    padding: 10px 14px;
+
+    margin-top: 14px !important;
+
+    border-radius: 8px;
+
+    font-size: 13px !important;
+    font-weight: 600;
+}
+
+.decision-accepted {
+    background-color: #e8f3e9;
+    color: #347653 !important;
+}
+
+.decision-rejected {
+    background-color: #faeae8;
+    color: #a74b43 !important;
+}
+
+.recommendation-reason {
+    padding: 10px 14px;
+
+    background-color: var(--green-soft);
+    border-radius: 8px;
+
+    font-size: 13px !important;
+    line-height: 1.6;
+
+    color: var(--text-muted) !important;
+
+    margin-top: 8px !important;
+
+    white-space: pre-wrap;
+    overflow-wrap: anywhere;
+}
+
+
+/* ========================================
+   ADAPTACIÓN A CELULARES
+======================================== */
+
+@media (max-width: 480px) {
+
+    .recommendation-actions {
+        flex-direction: column;
+    }
+
+    .recommendation-actions button {
+        width: 100%;
+    }
+
+    .recommendation-decision-form {
+        padding: 14px;
+    }
+
+    .recommendation-reason-input {
+        font-size: 16px;
+    }
+}
+
+
+/* ========================================
+   HISTORIAL - DISEÑO RESPONSIVE
+======================================== */
+
+@media (max-width: 768px) {
+
+    #recommendations-history .history-stats {
+        grid-template-columns:
+            repeat(2, minmax(0, 1fr));
+    }
+
+    .history-details-grid {
+        grid-template-columns:
+            repeat(2, minmax(0, 1fr));
+    }
+
+    #history-list .history-item {
+        padding: 14px;
+    }
+}
+
+@media (max-width: 480px) {
+
+    #history-list .history-item-header {
+        flex-wrap: wrap;
+        gap: 10px;
+    }
+
+    .history-item-icon {
+        width: 36px;
+        height: 36px;
+
+        font-size: 18px;
+    }
+
+    .history-item-content {
+        flex: 1;
+    }
+
+    #history-list .history-badge {
+        margin-left: 46px;
+    }
+
+    #history-list .history-item-header h3 {
+        font-size: 14px;
+    }
+
+    .history-details-grid {
+        grid-template-columns: minmax(0, 1fr);
+    }
+
+    #recommendations-history .history-stat {
+        padding: 12px;
+    }
+}
+
+
+/* ========================================
+   PANEL DESPLEGABLE DEL HISTORIAL
+======================================== */
+
+history-panel {
+    display: block;
+    width: 100%;
+    min-width: 0;
+}
+
+
+/* Encabezado desplegable */
+
+.history-panel > .history-panel-toggle {
+    display: flex;
+
+    align-items: center;
+    justify-content: space-between;
+
+    gap: 16px;
+
+    width: 100%;
+    padding: 4px 0;
+
+    box-sizing: border-box;
+
+    list-style: none;
+    cursor: pointer;
+}
+
+.history-panel-toggle::-webkit-details-marker {
+    display: none;
+}
+
+.history-panel-toggle::marker {
+    content: "";
+}
+
+
+/* Icono del historial */
+
+.history-panel-icon {
+    display: flex;
+
+    align-items: center;
+    justify-content: center;
+
+    width: 50px;
+    height: 50px;
+
+    flex-shrink: 0;
+
+    background: var(--green-light);
+
+    border-radius: 12px;
+
+    font-size: 24px;
+}
+
+
+/* Texto del encabezado */
+
+.history-panel-text {
+    flex: 1;
+    min-width: 0;
+}
+
+.history-panel-title {
+    display: block;
+
+    color: var(--green-dark);
+
+    font-size: 17px;
+    font-weight: 700;
+
+    margin: 0 0 5px;
+}
+
+.history-panel-text small {
+    display: block;
+
+    color: var(--text-muted);
+
+    font-size: 13px;
+    line-height: 1.5;
+}
+
+
+/* Flecha desplegable */
+
+.history-panel-arrow {
+    display: block;
+
+    width: 10px;
+    height: 10px;
+
+    flex-shrink: 0;
+
+    margin-right: 6px;
+
+    border-right: 2px solid var(--green-main);
+    border-bottom: 2px solid var(--green-main);
+
+    transform: rotate(45deg);
+
+    transition: transform 0.2s ease;
+}
+
+.history-panel[open]
+> .history-panel-toggle
+.history-panel-arrow {
+
+    transform: rotate(225deg);
+}
+
+
+/* Interacción */
+
+.history-panel-toggle:hover .history-panel-title {
+    color: var(--green-main);
+}
+
+.history-panel-toggle:focus-visible {
+    outline: 2px solid var(--green-main);
+    outline-offset: 6px;
+    border-radius: 8px;
+}
+
+
+/* Contenido del historial */
+
+.history-panel-content {
+    width: 100%;
+    min-width: 0;
+
+    box-sizing: border-box;
+
+    margin-top: 24px;
+    padding-top: 24px;
+
+    border-top: 1px solid var(--border);
+}
+
+
+/* ========================================
+   ADAPTACIÓN A CELULARES
+======================================== */
+
+@media (max-width: 600px) {
+
+    .history-panel > .history-panel-toggle {
+        gap: 10px;
+    }
+
+    .history-panel-icon {
+        width: 40px;
+        height: 40px;
+
+        font-size: 20px;
+    }
+
+    .history-panel-title {
+        font-size: 14px;
+    }
+
+    .history-panel-text small {
+        font-size: 12px;
+    }
+
+    .history-panel-content {
+        margin-top: 16px;
+        padding-top: 16px;
+    }
+}
+
+
+/* ========================================
+   PANELES ADMINISTRATIVOS DESPLEGABLES
+======================================== */
+
+.admin-panel {
+    width: 100%;
+    min-width: 0;
+
+    padding: 24px;
+
+    box-sizing: border-box;
+
+    background: var(--surface);
+
+    border: 1px solid var(--border);
+    border-radius: 18px;
+
+    box-shadow: var(--shadow);
+}
+
+.admin-panel > .history-panel-content {
+    min-width: 0;
+    width: 100%;
+}
+
+.admin-panel > .history-panel-toggle {
+    padding: 4px 0;
+}
+
+
+/* Adaptación a celulares */
+
+@media (max-width: 600px) {
+
+    .admin-panel {
+        padding: 16px;
+        border-radius: 14px;
+    }
+}

@@ -37,7 +37,32 @@ const elements = {
     nodeId: document.getElementById("node-id"),
 
     recommendationTitle: document.getElementById("recommendation-title"),
-    recommendationText: document.getElementById("recommendation-text")
+    recommendationText: document.getElementById("recommendation-text"),
+
+
+    historyTotal: document.getElementById("history-total"),
+    historyAccepted: document.getElementById("history-accepted"),
+    historyRejected: document.getElementById("history-rejected"),
+    historyPending: document.getElementById("history-pending"),
+
+    historyAcceptanceRate: document.getElementById(
+        "history-acceptance-rate"
+    ),
+
+    historyFarmFilter: document.getElementById(
+        "history-farm-filter"
+    ),
+
+    historyDecisionFilter: document.getElementById(
+        "history-decision-filter"
+    ),
+
+    historyRefresh: document.getElementById("history-refresh"),
+    historyMessage: document.getElementById("history-message"),
+    historyList: document.getElementById("history-list"),
+    historyPanel: document.getElementById("history-panel"),
+    usersPanel: document.getElementById("users-panel"),
+    accountPanel: document.getElementById("account-panel")
 };
 
 // ========================================
@@ -52,7 +77,20 @@ let refreshTimer = null;
 // ========================================
 
 function showLogin(message = "") {
+    
     isAuthenticated = false;
+
+    activeDecisionForm = null;
+
+    clearRecommendationHistory();
+
+    resetAdminPanels();
+
+    recommendationsRequestId++;
+
+    elements.recommendationText.replaceChildren();
+    elements.recommendationTitle.textContent =
+        "Preparando el análisis";
 
     // Detenemos las actualizaciones automáticas.
     if (refreshTimer !== null) {
@@ -333,13 +371,13 @@ async function loadNodes() {
 
         const allOption = document.createElement("option");
         allOption.value = "";
-        allOption.textContent = "Todos los nodos";
+        allOption.textContent = "Todas las fincas";
         elements.nodeSelector.appendChild(allOption);
 
         nodes.forEach((nodeId) => {
             const option = document.createElement("option");
             option.value = nodeId;
-            option.textContent = nodeId;
+            option.textContent = getNodeDisplayName(nodeId);
             elements.nodeSelector.appendChild(option);
         });
 
@@ -382,7 +420,7 @@ function showMeasurement(data) {
         "%"
     );
 
-    elements.nodeId.textContent = data.node_id;
+    elements.nodeId.textContent = getNodeDisplayName(data.node_id);
 
     const measurementDate = new Date(data.timestamp);
 
@@ -449,12 +487,25 @@ async function loadSelectedNode(nodeId) {
 // 8. TARJETAS DE NODOS
 // ========================================
 
+// Nombres visibles de los nodos.
+
+const NODE_DISPLAY_NAMES = {
+    "ESP32_TEST": "Finca 01",
+    "ESP32_TEST_02": "Finca 02",
+    "ESP32C6_01": "Finca 03"
+};
+
+function getNodeDisplayName(nodeId) {
+
+    return NODE_DISPLAY_NAMES[nodeId] || nodeId;
+}
+
 function createNodeCard(nodeId, measurement) {
     const card = document.createElement("article");
     card.className = "node-summary-card";
 
     const title = document.createElement("h3");
-    title.textContent = nodeId;
+    title.textContent = getNodeDisplayName(nodeId);
     card.appendChild(title);
 
     if (!measurement) {
@@ -530,6 +581,9 @@ async function loadAllNodes() {
         }
 
         const nodes = await response.json();
+        nodes.sort((a, b) => getNodeDisplayName(a).localeCompare(getNodeDisplayName(b), "es",
+                { numeric: true })
+        );
 
         if (!isAuthenticated) return;
 
@@ -583,13 +637,347 @@ async function loadAllNodes() {
 // Evita mostrar respuestas antiguas
 // cuando el usuario cambia de nodo.
 let recommendationsRequestId = 0;
+// Estado del formulario de decisión.
+let activeDecisionForm = null;
+
+// Evitar solicitudes simultáneas de decisiones.
+let isSavingDecision = false;
+
+
+async function registerRecommendationDecision(
+    recommendationId,
+    decision,
+    reason = null
+) {
+
+    if (!isAuthenticated || isSavingDecision) {
+        return;
+    }
+
+    if (decision === "rejected") {
+
+        reason = (reason || "").trim();
+
+        if (!reason || reason.length > 500) {
+            return;
+        }
+    }
+
+    isSavingDecision = true;
+
+    const form = elements.recommendationText.querySelector(
+        ".recommendation-decision-form"
+    );
+
+    const errorMessage = form?.querySelector(
+        ".recommendation-form-error"
+    );
+
+    if (errorMessage) {
+        errorMessage.textContent = "";
+    }
+
+    const controls = elements.recommendationText
+        .querySelectorAll("button, textarea");
+
+    controls.forEach(control => {
+        control.disabled = true;
+    });
+
+    try {
+
+        const response = await authenticatedFetch(
+            `/api/recommendations/${recommendationId}/decision`,
+            {
+                method: "POST",
+
+                headers: {
+                    "Content-Type": "application/json"
+                },
+
+                body: JSON.stringify({
+                    decision: decision,
+                    reason: reason
+                })
+            }
+        );
+
+        const data = await response.json();
+
+        if (!response.ok) {
+
+            throw new Error(
+                typeof data.detail === "string"
+                    ? data.detail
+                    : "No fue posible registrar la decisión."
+            );
+        }
+
+        // Cerrar el formulario después de guardar.
+
+        activeDecisionForm = null;
+        isSavingDecision = false;
+
+        if (!isAuthenticated) return;
+
+        // Actualizar recomendaciones e historial.
+
+        await loadRecommendations(
+            elements.nodeSelector.value
+        );
+
+        await loadRecommendationHistory();
+
+    } catch (error) {
+
+        if (
+            !isAuthenticated ||
+            error.message === "SESSION_EXPIRED"
+        ) {
+            return;
+        }
+
+        if (errorMessage) {
+
+            errorMessage.textContent = error.message;
+
+        } else {
+
+            console.error(
+                "Error al registrar la decisión:",
+                error
+            );
+        }
+
+    } finally {
+
+        isSavingDecision = false;
+
+        controls.forEach(control => {
+            control.disabled = false;
+        });
+    }
+}
+
+
+/* ========================================
+   FORMULARIO DE DECISIONES
+======================================== */
+
+function showRecommendationDecisionForm(
+    recommendation,
+    decision,
+    item,
+    actions
+) {
+
+    if (!isAuthenticated || isSavingDecision) {
+        return;
+    }
+
+    // No abrir varios formularios simultáneamente.
+
+    if (activeDecisionForm !== null) {
+        return;
+    }
+
+    activeDecisionForm = recommendation.id;
+
+    // Invalidar consultas anteriores pendientes.
+    recommendationsRequestId++;
+
+    actions.hidden = true;
+
+    const form = document.createElement("div");
+
+    form.className = "recommendation-decision-form";
+
+    const title = document.createElement("h4");
+
+    title.textContent =
+        decision === "rejected"
+            ? "Motivo del rechazo"
+            : "Confirmar aceptación";
+
+    form.appendChild(title);
+
+    const description = document.createElement("p");
+
+    description.className = "decision-form-description";
+
+    description.textContent =
+        decision === "rejected"
+            ? "Cuéntanos por qué consideras que esta " +
+              "recomendación no es adecuada para tu cultivo."
+            : "¿Estás de acuerdo con esta recomendación? " +
+              "Esto no significa que la acción ya fue realizada.";
+
+    form.appendChild(description);
+
+    let reasonInput = null;
+
+    // Crear el cajón de texto para el rechazo.
+
+    if (decision === "rejected") {
+
+        reasonInput = document.createElement("textarea");
+
+        reasonInput.className =
+            "recommendation-reason-input";
+
+        reasonInput.placeholder =
+            "Escribe aquí el motivo del rechazo...";
+
+        reasonInput.rows = 4;
+        reasonInput.maxLength = 500;
+        reasonInput.required = true;
+
+        reasonInput.setAttribute(
+            "aria-label",
+            "Motivo del rechazo"
+        );
+
+        form.appendChild(reasonInput);
+    }
+
+    // Mensajes de error.
+
+    const errorMessage = document.createElement("p");
+
+    errorMessage.className =
+        "recommendation-form-error";
+
+    errorMessage.setAttribute("role", "alert");
+
+    form.appendChild(errorMessage);
+
+    // Botones del formulario.
+
+    const formActions = document.createElement("div");
+
+    formActions.className = "recommendation-actions";
+
+    const cancelButton = document.createElement("button");
+
+    cancelButton.type = "button";
+
+    cancelButton.className =
+        "recommendation-cancel";
+
+    cancelButton.textContent = "Cancelar";
+
+    cancelButton.addEventListener("click", () => {
+
+        if (isSavingDecision) return;
+
+        activeDecisionForm = null;
+
+        form.remove();
+
+        actions.hidden = false;
+
+        loadRecommendations(
+            elements.nodeSelector.value
+        );
+    });
+
+    const saveButton = document.createElement("button");
+
+    saveButton.type = "button";
+
+    saveButton.className =
+        "recommendation-accept";
+
+    saveButton.textContent =
+        decision === "rejected"
+            ? "Guardar rechazo"
+            : "Confirmar aceptación";
+
+    // Contador de caracteres y validación.
+
+    if (reasonInput) {
+
+        const counter = document.createElement("small");
+
+        counter.className =
+            "recommendation-character-counter";
+
+        counter.textContent = "0 / 500 caracteres";
+
+        form.insertBefore(counter, errorMessage);
+
+        saveButton.disabled = true;
+
+        reasonInput.addEventListener("input", () => {
+
+            const length = reasonInput.value.length;
+
+            counter.textContent =
+                `${length} / 500 caracteres`;
+
+            saveButton.disabled =
+                !reasonInput.value.trim() ||
+                length > 500;
+
+        });
+    }
+
+    saveButton.addEventListener("click", async () => {
+
+        if (isSavingDecision) return;
+
+        const reason = reasonInput
+            ? reasonInput.value.trim()
+            : null;
+
+        if (
+            decision === "rejected" &&
+            (!reason || reason.length > 500)
+        ) {
+
+            errorMessage.textContent =
+                "Debes escribir un motivo válido.";
+
+            return;
+        }
+
+        await registerRecommendationDecision(
+            recommendation.id,
+            decision,
+            reason
+        );
+
+    });
+
+    formActions.append(
+        cancelButton,
+        saveButton
+    );
+
+    form.appendChild(formActions);
+
+    item.appendChild(form);
+
+    if (reasonInput) {
+        reasonInput.focus();
+    }
+}
+
 
 async function loadRecommendations(nodeId) {
 
+    if (!isAuthenticated) return;
+
+    // No actualizar las recomendaciones mientras
+    // el agricultor está registrando una decisión.
+
+    if (activeDecisionForm !== null || isSavingDecision) {
+        return;
+    }
+
     const requestId = ++recommendationsRequestId;
 
-    if (!elements.recommendationTitle ||
-        !elements.recommendationText) {
+    if (!elements.recommendationTitle || !elements.recommendationText) {
         return;
     }
 
@@ -604,7 +992,7 @@ async function loadRecommendations(nodeId) {
 
     try {
 
-        const response = await fetch(url);
+        const response = await authenticatedFetch(url);
 
         if (!response.ok) {
             throw new Error(
@@ -615,10 +1003,10 @@ async function loadRecommendations(nodeId) {
         const data = await response.json();
 
         // Ignorar respuestas que ya no
-        // corresponden a la selección actual.
+        // corresponden a la selección actual
+        // o si el usuario ha cerrado sesión.
         if (
-            requestId !== recommendationsRequestId ||
-            nodeId !== elements.nodeSelector.value
+            !isAuthenticated || requestId !== recommendationsRequestId || nodeId !== elements.nodeSelector.value
         ) {
             return;
         }
@@ -725,11 +1113,109 @@ async function loadRecommendations(nodeId) {
                         ? " °C"
                         : " %");
 
-                item.appendChild(title);
-                item.appendChild(message);
-                item.appendChild(details);
+                
+                    item.appendChild(title);
+                    item.appendChild(message);
+                    item.appendChild(details);
 
-                elements.recommendationText.appendChild(item);
+                    // ==================================
+                    // DECISIONES DEL AGRICULTOR
+                    // ==================================
+
+                    if (recommendation.decision === "accepted") {
+
+                        const status = document.createElement("p");
+
+                        status.className =
+                            "recommendation-decision decision-accepted";
+
+                        status.textContent =
+                            "✓ Recomendación aceptada";
+
+                        item.appendChild(status);
+
+                    } else if (recommendation.decision === "rejected") {
+
+                        const status = document.createElement("p");
+
+                        status.className =
+                            "recommendation-decision decision-rejected";
+
+                        status.textContent =
+                            "Recomendación rechazada";
+
+                        const reason = document.createElement("p");
+
+                        reason.className = "recommendation-reason";
+
+                        reason.textContent =
+                            `Motivo: ${recommendation.rejection_reason}`;
+
+                        item.appendChild(status);
+                        item.appendChild(reason);
+
+                    } else if (recommendation.id != null) {
+
+                        const actions = document.createElement("div");
+
+                        actions.className = "recommendation-actions";
+
+                        // Botón aceptar.
+
+                        const acceptButton = document.createElement("button");
+
+                        acceptButton.type = "button";
+
+                        acceptButton.className = "recommendation-accept";
+
+                        acceptButton.textContent = "Aceptar";
+
+                        acceptButton.addEventListener("click", () => {
+
+                            showRecommendationDecisionForm(
+                                recommendation,
+                                "accepted",
+                                item,
+                                actions
+                            );
+                        });
+
+                        // Botón rechazar.
+
+                        const rejectButton = document.createElement("button");
+
+                        rejectButton.type = "button";
+
+                        rejectButton.className = "recommendation-reject";
+
+                        rejectButton.textContent = "Rechazar";
+
+                        rejectButton.addEventListener("click", () => {
+
+                            showRecommendationDecisionForm(
+                                recommendation,
+                                "rejected",
+                                item,
+                                actions
+                            );
+                        });
+
+                        actions.appendChild(acceptButton);
+                        actions.appendChild(rejectButton);
+
+                        item.appendChild(actions);
+
+                    } else {
+
+                        const status = document.createElement("small");
+
+                        status.textContent =
+                            "Esperando registro de la recomendación.";
+
+                        item.appendChild(status);
+                    }
+
+                    elements.recommendationText.appendChild(item);
 
             });
 
@@ -792,10 +1278,7 @@ async function loadRecommendations(nodeId) {
 
         // No modificar la pantalla si ya
         // existe una solicitud más reciente.
-        if (
-            requestId !== recommendationsRequestId ||
-            nodeId !== elements.nodeSelector.value
-        ) {
+        if (!isAuthenticated || requestId !== recommendationsRequestId || nodeId !== elements.nodeSelector.value ) {
             return;
         }
 
@@ -805,6 +1288,806 @@ async function loadRecommendations(nodeId) {
         elements.recommendationText.textContent =
             "No fue posible consultar las recomendaciones. " +
             "Verifica la conexión con el servidor.";
+    }
+}
+
+
+/* ========================================
+   HISTORIAL DE RECOMENDACIONES
+======================================== */
+
+let recommendationHistory = [];
+let historyRequestId = 0;
+
+
+function clearRecommendationHistory() {
+
+    // Invalidar consultas pendientes.
+
+    historyRequestId++;
+
+    // Eliminar datos del usuario anterior.
+
+    recommendationHistory = [];
+    // Cerrar el panel desplegable.
+
+    if (elements.historyPanel) {
+
+        elements.historyPanel.open = false;
+    }
+
+    if (!elements.historyList) {
+        return;
+    }
+
+    elements.historyList.replaceChildren();
+
+    elements.historyTotal.textContent = "--";
+    elements.historyAccepted.textContent = "--";
+    elements.historyRejected.textContent = "--";
+    elements.historyPending.textContent = "--";
+
+    elements.historyAcceptanceRate.textContent =
+        "Tasa de aceptación: --";
+
+    elements.historyDecisionFilter.value = "all";
+
+    updateHistoryFarmFilter();
+
+    elements.historyMessage.textContent =
+        "Cargando historial...";
+}
+
+// ========================================
+// 1. FORMATEAR FECHAS
+// ========================================
+
+function formatHistoryDate(value) {
+
+    if (!value) {
+        return "Sin registrar";
+    }
+
+    const date = new Date(value);
+
+    if (Number.isNaN(date.getTime())) {
+        return "Fecha no disponible";
+    }
+
+    return date.toLocaleString("es-CO");
+}
+
+
+// ========================================
+// 2. CONSULTAR HISTORIAL DESDE FASTAPI
+// ========================================
+
+async function loadRecommendationHistory() {
+
+    if (!isAuthenticated || !elements.historyList) {
+        return;
+    }
+
+    const requestId = ++historyRequestId;
+
+    try {
+
+        const response = await authenticatedFetch(
+            "/api/recommendations/history?limit=500",
+            {
+                cache: "no-store"
+            }
+        );
+
+        if (!response.ok) {
+            throw new Error(
+                "No fue posible consultar el historial."
+            );
+        }
+
+        const data = await response.json();
+
+        if (!isAuthenticated ||requestId !== historyRequestId) {
+            return;
+        }
+
+        if (!Array.isArray(data)) {
+            throw new Error(
+                "Formato de historial incorrecto."
+            );
+        }
+
+        recommendationHistory = data;
+
+        updateHistoryFarmFilter();
+        renderRecommendationHistory();
+
+    } catch (error) {
+
+        if (!isAuthenticated ||requestId !== historyRequestId) {
+            return;
+        }
+
+        recommendationHistory = [];
+
+        updateHistoryFarmFilter();
+        renderRecommendationHistory();
+
+        elements.historyTotal.textContent = "--";
+        elements.historyAccepted.textContent = "--";
+        elements.historyRejected.textContent = "--";
+        elements.historyPending.textContent = "--";
+
+        elements.historyAcceptanceRate.textContent =
+            "Tasa de aceptación: --";
+
+        elements.historyMessage.textContent =
+            "No fue posible cargar el historial. " +
+            "Verifica la conexión y tu sesión.";
+
+    }
+}
+
+
+// ========================================
+// 3. CONFIGURAR FILTRO DE FINCAS
+// ========================================
+
+function updateHistoryFarmFilter() {
+
+    const previousSelection =
+        elements.historyFarmFilter.value;
+
+    const farms = new Map();
+
+    recommendationHistory.forEach((item) => {
+
+        farms.set(
+            String(item.farm_id),
+            item.farm_name
+        );
+
+    });
+
+    elements.historyFarmFilter.replaceChildren();
+
+    const allOption = document.createElement("option");
+
+    allOption.value = "";
+    allOption.textContent =
+        "Todas las fincas disponibles";
+
+    elements.historyFarmFilter.appendChild(allOption);
+
+    farms.forEach((farmName, farmId) => {
+
+        const option = document.createElement("option");
+
+        option.value = farmId;
+        option.textContent = farmName;
+
+        elements.historyFarmFilter.appendChild(option);
+
+    });
+
+    if (farms.has(previousSelection)) {
+
+        elements.historyFarmFilter.value =
+            previousSelection;
+
+    } else {
+
+        elements.historyFarmFilter.value = "";
+    }
+
+    // Configurar el selector según las fincas disponibles.
+
+    if (farms.size === 0) {
+
+        elements.historyFarmFilter.disabled = true;
+
+        allOption.textContent =
+            "Sin fincas con recomendaciones";
+
+    } else if (farms.size === 1) {
+
+        const onlyFarmId = farms.keys().next().value;
+
+        elements.historyFarmFilter.value = onlyFarmId;
+
+        elements.historyFarmFilter.disabled = true;
+
+    } else {
+
+        elements.historyFarmFilter.disabled = false;
+    }
+}
+
+
+// ========================================
+// 4. ACTUALIZAR ESTADISTICAS
+// ========================================
+
+function updateHistoryStatistics(data) {
+
+    const total = data.length;
+
+    const accepted = data.filter(
+        item => item.decision === "accepted"
+    ).length;
+
+    const rejected = data.filter(
+        item => item.decision === "rejected"
+    ).length;
+
+    const pending = data.filter(
+        item => item.decision == null
+    ).length;
+
+    elements.historyTotal.textContent = total;
+    elements.historyAccepted.textContent = accepted;
+    elements.historyRejected.textContent = rejected;
+    elements.historyPending.textContent = pending;
+
+    // Solo considerar recomendaciones
+    // sobre las que se tomo una decision.
+
+    const decided = accepted + rejected;
+
+    if (decided === 0) {
+
+        elements.historyAcceptanceRate.textContent =
+            "Tasa de aceptación: aún sin decisiones";
+
+    } else {
+
+        const rate = (accepted / decided) * 100;
+
+        elements.historyAcceptanceRate.textContent =
+            `Tasa de aceptación: ${rate.toFixed(1)} %`;
+    }
+}
+
+
+// ========================================
+// 5. CREAR TARJETA DE HISTORIAL
+// ========================================
+
+
+function createHistoryCard(item) {
+
+    const card = document.createElement("article");
+
+    card.className = "history-item";
+
+    // ==================================
+    // 1. ENCABEZADO HORIZONTAL
+    // ==================================
+
+    const header = document.createElement("div");
+
+    header.className = "history-item-header";
+
+    // Icono según la variable.
+
+    const icon = document.createElement("div");
+
+    icon.className = "history-item-icon";
+
+    if (item.variable === "temperature_c") {
+
+        icon.textContent = "🌡️";
+
+    } else if (item.variable === "soil_moisture_pct") {
+
+        icon.textContent = "🌱";
+
+    } else {
+
+        icon.textContent = "💧";
+    }
+
+    // Información principal.
+
+    const content = document.createElement("div");
+
+    content.className = "history-item-content";
+
+    const title = document.createElement("h3");
+
+    title.textContent = item.title;
+
+    const location = document.createElement("p");
+
+    location.className = "history-item-location";
+
+    location.textContent =
+        `${item.farm_name} · ${item.node_id}`;
+
+    const date = document.createElement("p");
+
+    date.className = "history-item-date";
+
+    date.textContent =
+        formatHistoryDate(item.created_at);
+
+    content.append(title, location, date);
+
+    // Estado de la decisión.
+
+    const badge = document.createElement("span");
+
+    badge.className = "history-badge";
+
+    if (item.decision === "accepted") {
+
+        badge.textContent = "Aceptada";
+
+        badge.classList.add(
+            "history-badge-accepted"
+        );
+
+    } else if (item.decision === "rejected") {
+
+        badge.textContent = "Rechazada";
+
+        badge.classList.add(
+            "history-badge-rejected"
+        );
+
+    } else {
+
+        badge.textContent = "Sin decisión";
+
+        badge.classList.add(
+            "history-badge-pending"
+        );
+    }
+
+    header.append(icon, content, badge);
+
+    card.appendChild(header);
+
+
+    // ==================================
+    // 2. MOTIVO DEL RECHAZO
+    // ==================================
+
+    if (item.decision === "rejected") {
+
+        const reason = document.createElement("div");
+
+        reason.className = "history-rejection-reason";
+
+        const reasonTitle = document.createElement("strong");
+
+        reasonTitle.textContent = "Motivo: ";
+
+        const reasonText = document.createElement("span");
+
+        reasonText.textContent =
+            item.rejection_reason || "Sin información";
+
+        reason.append(reasonTitle, reasonText);
+
+        card.appendChild(reason);
+    }
+
+
+    // ==================================
+    // 3. INFORMACIÓN DESPLEGABLE
+    // ==================================
+
+    const details = document.createElement("details");
+
+    details.className = "history-expandable";
+
+    const summary = document.createElement("summary");
+
+    summary.textContent = "Ver detalles";
+
+    details.appendChild(summary);
+
+    const detailsContent = document.createElement("div");
+
+    detailsContent.className = "history-details-content";
+
+    // Mensaje original.
+
+    const message = document.createElement("p");
+
+    message.className = "history-item-message";
+
+    message.textContent = item.message;
+
+    detailsContent.appendChild(message);
+
+    // Cuadrícula de información adicional.
+
+    const detailsGrid = document.createElement("div");
+
+    detailsGrid.className = "history-details-grid";
+
+    const unit =
+        item.variable === "temperature_c"
+            ? "°C"
+            : "%";
+
+    // Función auxiliar para crear cada dato.
+
+    function addDetail(label, value) {
+
+        const detail = document.createElement("div");
+
+        detail.className = "history-detail-box";
+
+        const detailLabel = document.createElement("span");
+
+        detailLabel.textContent = label;
+
+        const detailValue = document.createElement("strong");
+
+        detailValue.textContent = value;
+
+        detail.append(detailLabel, detailValue);
+
+        detailsGrid.appendChild(detail);
+    }
+
+    addDetail(
+        "Valor inicial",
+        `${item.value} ${unit}`
+    );
+
+    addDetail(
+        "Umbral utilizado",
+        `${item.threshold} ${unit}`
+    );
+
+    addDetail(
+        "Estado de la condición",
+        item.closed_at ? "Cerrada" : "Abierta"
+    );
+
+    addDetail(
+        "Última detección",
+        formatHistoryDate(item.last_seen_at)
+    );
+
+    if (item.closed_at) {
+
+        addDetail(
+            "Fecha de cierre",
+            formatHistoryDate(item.closed_at)
+        );
+    }
+
+    if (item.decision != null) {
+
+        addDetail(
+            "Usuario responsable",
+            item.decided_by_username || "No disponible"
+        );
+
+        addDetail(
+            "Fecha de decisión",
+            formatHistoryDate(item.decided_at)
+        );
+    }
+
+    detailsContent.appendChild(detailsGrid);
+
+    details.appendChild(detailsContent);
+
+    // Cambiar texto al desplegar la tarjeta.
+
+    details.addEventListener("toggle", () => {
+
+        summary.textContent = details.open
+            ? "Ocultar detalles"
+            : "Ver detalles";
+
+    });
+
+    card.appendChild(details);
+
+    return card;
+}
+
+
+// ========================================
+// 6. FILTRAR Y MOSTRAR HISTORIAL
+// ========================================
+
+function renderRecommendationHistory() {
+
+    const selectedFarm =
+        elements.historyFarmFilter.value;
+
+    const selectedDecision =
+        elements.historyDecisionFilter.value;
+
+    // Filtrar por finca.
+
+    const farmData = recommendationHistory.filter(
+        item =>
+            selectedFarm === "" ||
+            String(item.farm_id) === selectedFarm
+    );
+
+    // Estadisticas de la finca seleccionada.
+
+    updateHistoryStatistics(farmData);
+
+    // Filtrar por decision.
+
+    const filteredData = farmData.filter((item) => {
+
+        if (selectedDecision === "all") {
+            return true;
+        }
+
+        if (selectedDecision === "pending") {
+            return item.decision == null;
+        }
+
+        return item.decision === selectedDecision;
+
+    });
+
+    elements.historyList.replaceChildren();
+
+    if (filteredData.length === 0) {
+
+        elements.historyMessage.textContent =
+            "No hay recomendaciones que coincidan " +
+            "con los filtros seleccionados.";
+
+        return;
+    }
+
+    elements.historyMessage.textContent =
+        `Mostrando ${filteredData.length} ` +
+        `de ${farmData.length} recomendaciones cargadas.`;
+
+    filteredData.forEach((item) => {
+
+        const card = createHistoryCard(item);
+
+        elements.historyList.appendChild(card);
+
+    });
+}
+
+
+// ========================================
+// 7. INICIALIZAR CONTROLES
+// ========================================
+
+
+/* ========================================
+   CONTROL DE PANELES DESPLEGABLES
+======================================== */
+
+function initializeCollapsiblePanel(panel,closedText,openedText) {
+
+    if (!panel) return;
+
+    const title = panel.querySelector(".history-panel-title");
+
+    if (!title) return;
+
+    function updateTitle() {title.textContent = panel.open ? openedText : closedText;}
+
+    // Actualizar al abrir o cerrar.
+
+    panel.ontoggle = updateTitle;
+
+    // Establecer el texto inicial.
+
+    updateTitle();
+
+    // Abrir el panel cuando se selecciona
+    // desde el menú de navegación.
+
+    window.onhashchange = openPanelFromNavigation;
+
+    openPanelFromNavigation();
+}
+
+
+function openPanelFromNavigation() {
+
+    if (!isAuthenticated) return;
+
+    const sectionId = window.location.hash.slice(1);
+
+    if (!sectionId) return;
+
+    const section = document.getElementById(sectionId);
+
+    if (!section) return;
+
+    // No abrir secciones ocultas para el usuario.
+
+    if (section.closest("[hidden]")) {
+        return;
+    }
+
+    const panel = section.querySelector(
+        ".history-panel"
+    );
+
+    if (panel) {
+
+        panel.open = true;
+    }
+}
+
+
+function resetAdminPanels() {
+
+    // Cerrar los paneles administrativos.
+
+    if (elements.usersPanel) {
+        elements.usersPanel.open = false;
+    }
+
+    if (elements.accountPanel) {
+        elements.accountPanel.open = false;
+    }
+
+    // Limpiar los formularios administrativos.
+
+    const formIds = [
+        "create-user-form",
+        "edit-user-form",
+        "reset-password-form",
+        "change-username-form",
+        "change-password-form"
+    ];
+
+    formIds.forEach(id => {
+
+        const form = document.getElementById(id);
+
+        if (form) {
+            form.reset();
+        }
+    });
+
+    // Ocultar formularios secundarios.
+
+    const containerIds = [
+        "create-user-form-container",
+        "edit-user-form-container",
+        "reset-password-form-container"
+    ];
+
+    containerIds.forEach(id => {
+
+        const container = document.getElementById(id);
+
+        if (container) {
+            container.hidden = true;
+        }
+    });
+
+    // Limpiar mensajes administrativos.
+
+    const messageIds = [
+        "create-user-message",
+        "edit-user-message",
+        "reset-password-message",
+        "change-username-message",
+        "change-password-message",
+        "users-message"
+    ];
+
+    messageIds.forEach(id => {
+
+        const message = document.getElementById(id);
+
+        if (message) {
+            message.textContent = "";
+        }
+    });
+
+    // Eliminar la lista de usuarios de la sesión anterior.
+
+    const usersTable = document.getElementById(
+        "users-table-body"
+    );
+
+    if (usersTable) {
+        usersTable.replaceChildren();
+    }
+
+    // Limpiar el nombre de la cuenta anterior.
+
+    const currentAccount = document.getElementById(
+        "account-current-username"
+    );
+
+    if (currentAccount) {
+        currentAccount.textContent = "";
+    }
+}
+
+
+function initializeRecommendationHistory() {
+
+    if (!elements.historyList) {
+        return;
+    }
+
+    // Filtro de fincas.
+
+    elements.historyFarmFilter.addEventListener(
+        "change",
+        renderRecommendationHistory
+    );
+
+    // Filtro de decisiones.
+
+    elements.historyDecisionFilter.addEventListener(
+        "change",
+        renderRecommendationHistory
+    );
+
+    // Botón actualizar.
+
+    elements.historyRefresh.addEventListener(
+        "click",
+        loadRecommendationHistory
+    );
+}
+
+
+function initializeRecommendationHistory() {
+
+    if (!elements.historyList) {
+        return;
+    }
+
+    // Filtro de fincas.
+
+    elements.historyFarmFilter.addEventListener(
+        "change",
+        renderRecommendationHistory
+    );
+
+    // Filtro de decisiones.
+
+    elements.historyDecisionFilter.addEventListener(
+        "change",
+        renderRecommendationHistory
+    );
+
+    // Botón de actualización.
+
+    elements.historyRefresh.addEventListener(
+        "click",
+        loadRecommendationHistory
+    );
+
+    // Panel desplegable del historial.
+
+    if (elements.historyPanel) {
+
+        elements.historyPanel.ontoggle = () => {
+
+            const title = elements.historyPanel
+                .querySelector(".history-panel-title");
+
+            if (title) {
+
+                title.textContent =
+                    elements.historyPanel.open
+                        ? "Ocultar historial de recomendaciones"
+                        : "Ver historial de recomendaciones";
+            }
+        };
     }
 }
 
@@ -851,6 +2134,17 @@ async function refreshDashboard() {
 // Inicializamos las funciones del dashboard
 // únicamente después de confirmar la autenticación.
 
+async function handleRecommendationNodeChange() {
+
+    activeDecisionForm = null;
+
+    recommendationsRequestId++;
+
+    elements.recommendationText.replaceChildren();
+
+    await refreshDashboard();
+}
+
 async function initializeDashboardData() {
     if (!elements.nodeSelector) {
         console.error("No se encontró el selector de nodos.");
@@ -866,12 +2160,29 @@ async function initializeDashboardData() {
         refreshDashboard
     );
 
+    elements.nodeSelector.removeEventListener(
+        "change",
+        handleRecommendationNodeChange
+    );
+
     elements.nodeSelector.addEventListener(
         "change",
-        refreshDashboard
+        handleRecommendationNodeChange
     );
 
     await refreshDashboard();
+
+    if (!isAuthenticated) return;
+
+    // Inicializar los tres desplegables.
+    initializeCollapsiblePanel();
+
+    // Inicializar el historial.
+    initializeRecommendationHistory();
+
+    await loadRecommendationHistory();
+
+    if (!isAuthenticated) return;
 
     // Evitamos crear varios temporizadores.
     if (refreshTimer !== null) {

@@ -7,6 +7,10 @@ from pathlib import Path
 from fastapi.staticfiles import StaticFiles
 from fastapi.responses import FileResponse
 
+import logging
+
+logger = logging.getLogger("uvicorn.error")
+
 from app.database import (
     initialize_database,
     save_measurement,
@@ -25,6 +29,18 @@ from app.auth import router as auth_router
 from app.auth import get_current_user, require_admin
 from app.security import hash_password
 from app.recommendations import evaluate_measurement
+
+#importar funciones de la sección de recomendaciones 
+
+from typing import Literal
+
+from app.recommendations_history import (
+    MAX_MEASUREMENT_AGE,
+    initialize_recommendation_history,
+    get_active_recommendations,
+    save_recommendation_decision,
+    get_recommendation_history
+)
 
 app = FastAPI(title="IoT Server")
 BASE_DIR = Path(__file__).resolve().parent.parent
@@ -68,7 +84,13 @@ class UpdateFarmerStatusInput(BaseModel):
 @app.on_event("startup")
 def startup_event():
     initialize_database()
+    initialize_recommendation_history()
 
+class RecommendationDecisionInput(BaseModel):
+
+    decision: Literal["accepted", "rejected"]
+
+    reason: str | None = Field(default=None,max_length=500)
 
 @app.get("/")
 def root():
@@ -97,7 +119,14 @@ def create_measurement(measurement: MeasurementInput):
             temperature_c=measurement.temperature_c,
             humidity_pct=measurement.humidity_pct,
         )
+
     except Exception as error:
+
+        logger.exception(
+            "Error guardando la medición del nodo %s",
+            measurement.node_id
+        )
+
         raise HTTPException(
             status_code=500,
             detail="No fue posible guardar la medición."
@@ -328,11 +357,6 @@ def reset_user_password(
 # RECOMENDACIONES AGRICOLAS
 # ============================================
 
-# Tiempo maximo permitido desde la ultima
-# medicion para considerarla reciente.
-MAX_MEASUREMENT_AGE = timedelta(minutes=10)
-
-
 @app.get("/api/recommendations")
 def list_recommendations(
     node_id: str | None = Query(
@@ -444,9 +468,25 @@ def list_recommendations(
             continue
 
         # 6. Evaluar las reglas agricolas.
-        recommendations = evaluate_measurement(
-            measurement
+        recommendations = evaluate_measurement(measurement)
+
+        active_recommendations = get_active_recommendations(
+            node_id=current_node,
+            measurement_id=measurement["id"],
+            farm_id=farm_id
         )
+
+        for item in recommendations:
+
+            stored = active_recommendations.get(item["code"])
+
+            item["id"] = (stored["id"] if stored else None)
+
+            item["decision"] = (stored["decision"] if stored else None)
+
+            item["rejection_reason"] = (stored["rejection_reason"]if stored else None)
+
+            item["decided_at"] = (stored["decided_at"] if stored else None)
 
         results.append({
             "node_id": current_node,
@@ -465,3 +505,97 @@ def list_recommendations(
         ),
         "nodes": results
     }
+
+
+# ============================================
+# DECISIONES SOBRE RECOMENDACIONES
+# ============================================
+
+@app.post("/api/recommendations/{recommendation_id}/decision")
+def register_recommendation_decision(
+    recommendation_id: int,
+    data: RecommendationDecisionInput,
+    current_user: dict = Depends(get_current_user)
+):
+
+    try:
+
+        result = save_recommendation_decision(
+            recommendation_id=recommendation_id,
+            decision=data.decision,
+            reason=data.reason,
+            current_user=current_user
+        )
+
+        return {
+            "message": "Decision registrada correctamente.",
+            "recommendation": result
+        }
+
+    except LookupError as error:
+
+        raise HTTPException(
+            status_code=404,
+            detail=str(error)
+        ) from error
+
+    except ValueError as error:
+
+        raise HTTPException(
+            status_code=400,
+            detail=str(error)
+        ) from error
+
+    except RuntimeError as error:
+
+        raise HTTPException(
+            status_code=409,
+            detail=str(error)
+        ) from error
+
+
+# ============================================
+# HISTORIAL DE RECOMENDACIONES
+# ============================================
+
+@app.get("/api/recommendations/history")
+def list_recommendation_history(
+    limit: int = Query(
+        default=50,
+        ge=1,
+        le=500
+    ),
+    node_id: str | None = Query(
+        default=None,
+        min_length=1,
+        max_length=50
+    ),
+    current_user: dict = Depends(get_current_user)
+):
+
+    if current_user["role"] == "farmer":
+
+        farm_id = current_user["farm_id"]
+
+        if farm_id is None:
+            raise HTTPException(
+                status_code=403,
+                detail="Usuario sin finca asignada."
+            )
+
+    elif current_user["role"] == "admin":
+
+        farm_id = None
+
+    else:
+
+        raise HTTPException(
+            status_code=403,
+            detail="Acceso no autorizado."
+        )
+
+    return get_recommendation_history(
+        farm_id=farm_id,
+        node_id=node_id,
+        limit=limit
+    )
