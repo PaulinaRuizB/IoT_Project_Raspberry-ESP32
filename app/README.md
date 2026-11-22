@@ -455,3 +455,7 @@ python -m app.create_farmer
 Se implementaron dos tipos de sesiones: administrador y agricultor. Cada una cuenta con inicio de sesión con contraseña protegida por HASH.
 
 Desde la cuenta de Administrador es posible añadir nuevos agricultores, asignar fincas, editar información y activar o desactivar cuentas. 
+
+## 10. Recomendaciones e historial 
+
+Se agregaron las secciones de recomendaciones generadas a partir de los datos tomados, junto con un historial que permite todas las recomendaciones y las acciones tomadas (aceptar, rechazar, razón)

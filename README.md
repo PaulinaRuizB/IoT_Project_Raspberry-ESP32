@@ -97,6 +97,16 @@ Estructura:
     ├── app/
     │   ├── main.py
     │   └── database.py
+        └── auth.py
+        └── create_admin.py
+        └── create_farmer.py
+        └──recommendations.py
+        └──recommendations_history.py
+        └──security.py
+    ├──static/
+        └──app.js
+        └──index.html
+        └──styles.css 
     ├── iot_data.db
     ├── .gitignore
     ├── config.yaml
@@ -104,16 +114,9 @@ Estructura:
     ├── run.sh
     └── README.md
 
-Descripción:
+### 4.1 Diagrama Sistema: 
 
-- `app/main.py`: instancia de FastAPI, modelos de entrada y endpoints HTTP.
-- `app/database.py`: inicialización de SQLite y funciones para guardar y consultar mediciones.
-- `iot_data.db`: archivo local que contiene la base de datos.
-- `.gitignore`: define archivos que Git debe ignorar.
-- `carpeta static`: archivos html, js y css para la programación del dashboard. 
-- `README.md`: documentación del proyecto.
-
-El archivo `iot_data.db` se genera durante la ejecución.
+![alt text](<Diagrama sistema Agriasistente.png>)
 
 ## 5. Entorno virtual de Python
 
@@ -211,24 +214,6 @@ Se agregaron los sensores de temperatura (BMP280), humedad ambiental (dht11) y h
 
 El servidor actual es una base funcional para continuar el desarrollo, pero todavía no es un sistema completo listo para desplegar en una explotación agrícola.
 
-## 12. Plan de desarrollo
-
-1. Documentar y versionar la API y la base de datos.
-2. Mejorar la ejecución del servidor para que pueda iniciarse automáticamente.
-3. Definir y probar la comunicación entre los nodos y la Raspberry Pi.
-4. Recibir mediciones de un ESP32 real.
-5. Validar y almacenar las lecturas físicas.
-6. Desarrollar el dashboard web personalizado.
-7. Implementar autenticación y usuarios.
-8. Mostrar el historial y el estado de los nodos.
-9. Crear reglas iniciales para recomendaciones agrícolas.
-10. Integrar la cámara de la Raspberry Pi y análisis visual básico.
-11. Registrar decisiones del agricultor.
-12. Implementar alertas locales.
-13. Validar el funcionamiento sin Internet.
-14. Evaluar sincronización cuando exista conectividad.
-15. Realizar pruebas con usuarios y documentar los resultados. 
-
 # Estado actual del desarrollo
 
 Hasta esta etapa se cuenta con:
@@ -244,3 +229,5 @@ Hasta esta etapa se cuenta con:
 - Pruebas de inicio de sesión, cierre de sesión y separación de datos.
 - Inicios de sesión con cuentas de administrador y agricultor. El primero puede agregar, editar, desactivar o cambiar información de las demas cuentas. 
 - Un nodo completo funcionando con temperatura, humedad ambiental y humedad del suelo junto con recomendaciones. 
+- Recomendaciones e historial según los datos. 
+
